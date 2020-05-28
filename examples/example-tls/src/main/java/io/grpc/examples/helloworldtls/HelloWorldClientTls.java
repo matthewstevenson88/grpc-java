@@ -30,6 +30,13 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.net.ssl.SSLException;
+/*
+import com.google.common.flags.Flag;
+import com.google.common.flags.FlagSpec;
+import com.google.common.flags.Flags;
+*/
+// TODO: change flags to use com.google.common.flags
+
 
 /**
  * A simple client that requests a greeting from the {@link HelloWorldServerTls} with TLS.
@@ -39,17 +46,29 @@ public class HelloWorldClientTls {
 
     private final ManagedChannel channel;
     private final GreeterGrpc.GreeterBlockingStub blockingStub;
-
+    /*
+    @FlagSpec(name = "server_address", help = "address of the server")
+    private static final Flag<String> serverAddr = "localhost:50051";
+    @FlagSpec(name = "server_root_cert_pem_path", help = "path to the root X509 certificate")
+    private static final Flag<String> rootCert = "example-tls/testdata/ca.cert";
+    @FlagSpec(name = "client_cert_pem_path", help = "path to client's X509 certificate")
+    private static final Flag<String> certFile = "example-tls/testdata/client.server";
+    @FlagSpec(name = "client_key_pem_path", help = "path to client's private key")
+    private static final Flag<String> keyFile = "example-tls/testdata/client.key";
+    */
     private static SslContext buildSslContext(String trustCertCollectionFilePath,
                                               String clientCertChainFilePath,
                                               String clientPrivateKeyFilePath) throws SSLException {
         SslContextBuilder builder = GrpcSslContexts.forClient();
-        if (trustCertCollectionFilePath != null) {
+        /*if (trustCertCollectionFilePath != null) {
             builder.trustManager(new File(trustCertCollectionFilePath));
         }
         if (clientCertChainFilePath != null && clientPrivateKeyFilePath != null) {
             builder.keyManager(new File(clientCertChainFilePath), new File(clientPrivateKeyFilePath));
-        }
+            }*/
+        builder.trustManager(new File(trustCertCollectionFilePath));
+        builder.keyManager(new File(clientCertChainFilePath), newFile(clientPrivateKeyFilePath));
+        builder.protocols("VERSION_TLS13");
         return builder.build();
     }
 
@@ -100,31 +119,24 @@ public class HelloWorldClientTls {
      */
     public static void main(String[] args) throws Exception {
 
-        if (args.length < 2 || args.length == 4 || args.length > 5) {
-            System.out.println("USAGE: HelloWorldClientTls host port [trustCertCollectionFilePath " +
-                    "[clientCertChainFilePath clientPrivateKeyFilePath]]\n  Note: clientCertChainFilePath and " +
-                    "clientPrivateKeyFilePath are only needed if mutual auth is desired.");
-            System.exit(0);
+        String[] flagArgs = Flags.parseAndReturnLeftovers(args);
+
+        for (String flag: flagArgs){
+          logger.log(flagArgs);
         }
 
-        HelloWorldClientTls client;
-        switch (args.length) {
-            case 2:
-                /* Use default CA. Only for real server certificates. */
-                client = new HelloWorldClientTls(args[0], Integer.parseInt(args[1]),
-                        buildSslContext(null, null, null));
-                break;
-            case 3:
-                client = new HelloWorldClientTls(args[0], Integer.parseInt(args[1]),
-                        buildSslContext(args[2], null, null));
-                break;
-            default:
-                client = new HelloWorldClientTls(args[0], Integer.parseInt(args[1]),
-                        buildSslContext(args[2], args[3], args[4]));
-        }
+        String host = flagArgs[0].substring(0,flagArgs[0].indexOf(':'));
+        int port = Integer.parseInt(flagArgs[0].substring(flagArgs[0].indexOf(':'),flagArgs[0].length()));
+        String certChainFilePath = flagArgs[1];
+        String privateKeyFilePath = flagArgs[2];
+        String trustCertCollectionFilePath = flagArgs[3];
+
+            //fix buildsslcontext!
+        HelloWorldClientTls client= new HelloWorldClientTls(host, port,
+            buildSslContext(certChainFilePath, privateKeyFilePath, trustCertCollectionFilePath));
 
         try {
-            client.greet(args[0]);
+            client.greet(host);
         } finally {
             client.shutdown();
         }

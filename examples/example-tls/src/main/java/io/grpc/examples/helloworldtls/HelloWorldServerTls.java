@@ -32,6 +32,14 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.logging.Logger;
 
+/*
+import com.google.common.flags.Flag;
+import com.google.common.flags.FlagSpec;
+import com.google.common.flags.Flags;
+*/
+// TODO: change flags to use com.google.common.flags
+
+
 /**
  * Server that manages startup/shutdown of a {@code Greeter} server with TLS enabled.
  */
@@ -44,11 +52,20 @@ public class HelloWorldServerTls {
     private final String certChainFilePath;
     private final String privateKeyFilePath;
     private final String trustCertCollectionFilePath;
-
-    public HelloWorldServerTls(int port,
-                               String certChainFilePath,
-                               String privateKeyFilePath,
-                               String trustCertCollectionFilePath) {
+    /*
+    @FlagSpec(name = "port", help = "port number to use for connection")
+    private static final Flag<String> portFlag = "50051";
+    @FlagSpec(name = "client_root_cert_pem_path", help = "path to root X509 certificate")
+    private static final Flag<String> rootCert = "example-tls/testdata/ca.cert";
+    @FlagSpec(name = "server_cert_pem_path", help = "path to server's X509 certificate")
+    private static final Flag<String> certFile = "example-tls/testdata/service.pem";
+    @FlagSpec(name = "server_key_pem_path", help = "path to server's private key")
+    private static final Flag<String> keyFile = "example-tls/testdata/service.key";
+    */
+  public HelloWorldServerTls(int port,
+                             String certChainFilePath,
+                             String privateKeyFilePath,
+                             String trustCertCollectionFilePath) {
         this.port = port;
         this.certChainFilePath = certChainFilePath;
         this.privateKeyFilePath = privateKeyFilePath;
@@ -61,16 +78,23 @@ public class HelloWorldServerTls {
         if (trustCertCollectionFilePath != null) {
             sslClientContextBuilder.trustManager(new File(trustCertCollectionFilePath));
             sslClientContextBuilder.clientAuth(ClientAuth.REQUIRE);
+            sslClientContextBuilder.protocols("VERSION_TLS13");
         }
         return GrpcSslContexts.configure(sslClientContextBuilder);
     }
 
     private void start() throws IOException {
-        server = NettyServerBuilder.forPort(port)
+      /*server = NettyServerBuilder.forPort(port)
                 .addService(new GreeterImpl())
                 .sslContext(getSslContextBuilder().build())
                 .build()
-                .start();
+                .start();*/
+       server = NettyServerBuilder.forPort(port)
+                .useTransportSecurity(new File(certChainFilePath), new File(privateKeyFilePath))
+                .addService(new GreeterImpl())
+               .build()
+               .start();
+
         logger.info("Server started, listening on " + port);
         Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override
@@ -103,19 +127,15 @@ public class HelloWorldServerTls {
      */
     public static void main(String[] args) throws IOException, InterruptedException {
 
-        if (args.length < 3 || args.length > 4) {
-            System.out.println(
-                    "USAGE: HelloWorldServerTls port certChainFilePath privateKeyFilePath " +
-                    "[trustCertCollectionFilePath]\n  Note: You only need to supply trustCertCollectionFilePath if you want " +
-                    "to enable Mutual TLS.");
-            System.exit(0);
-        }
+        String[] flagArgs = Flags.parseAndReturnLeftovers(args);
+
+        int port = Integer.parseInt(flagArgs[0]);
+        String certChainFilePath = flagArgs[1];
+        String privateKeyFilePath = flagArgs[2];
+        String trustCertCollectionFilePath = flagArgs[3];
 
         final HelloWorldServerTls server = new HelloWorldServerTls(
-                Integer.parseInt(args[0]),
-                args[1],
-                args[2],
-                args.length == 4 ? args[3] : null);
+            port, certChainFilePath, privateKeyFilePath, trustCertCollectionFilePath);
         server.start();
         server.blockUntilShutdown();
     }
