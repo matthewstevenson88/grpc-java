@@ -37,6 +37,7 @@ import com.google.common.flags.Flag;
 import com.google.common.flags.FlagSpec;
 import com.google.common.flags.Flags;
 */
+
 // TODO: change flags to use com.google.common.flags
 
 
@@ -52,6 +53,7 @@ public class HelloWorldServerTls {
     private final String certChainFilePath;
     private final String privateKeyFilePath;
     private final String trustCertCollectionFilePath;
+
     /*
     @FlagSpec(name = "port", help = "port number to use for connection")
     private static final Flag<String> portFlag = "50051";
@@ -62,6 +64,7 @@ public class HelloWorldServerTls {
     @FlagSpec(name = "server_key_pem_path", help = "path to server's private key")
     private static final Flag<String> keyFile = "example-tls/testdata/service.key";
     */
+
   public HelloWorldServerTls(int port,
                              String certChainFilePath,
                              String privateKeyFilePath,
@@ -73,8 +76,8 @@ public class HelloWorldServerTls {
     }
 
     private SslContextBuilder getSslContextBuilder() {
-        SslContextBuilder sslClientContextBuilder = SslContextBuilder.forServer(new File(certChainFilePath),
-                new File(privateKeyFilePath));
+        SslContextBuilder sslClientContextBuilder = SslContextBuilder.forServer(new File(privateKeyFilePath),
+            new File(certChainFilePath));
         if (trustCertCollectionFilePath != null) {
             sslClientContextBuilder.trustManager(new File(trustCertCollectionFilePath));
             sslClientContextBuilder.clientAuth(ClientAuth.REQUIRE);
@@ -84,11 +87,6 @@ public class HelloWorldServerTls {
     }
 
     private void start() throws IOException {
-      /*server = NettyServerBuilder.forPort(port)
-                .addService(new GreeterImpl())
-                .sslContext(getSslContextBuilder().build())
-                .build()
-                .start();*/
        server = NettyServerBuilder.forPort(port)
                 .useTransportSecurity(new File(certChainFilePath), new File(privateKeyFilePath))
                 .addService(new GreeterImpl())
@@ -126,13 +124,13 @@ public class HelloWorldServerTls {
      * Main launches the server from the command line.
      */
     public static void main(String[] args) throws IOException, InterruptedException {
+        // ./build/install/example-tls/bin/hello-world-tls-server 50051 testdata/service.pem testdata/service.key testdata/ca.pem
+        //String[] args = Flags.parseAndReturnLeftovers(args);
 
-        String[] flagArgs = Flags.parseAndReturnLeftovers(args);
-
-        int port = Integer.parseInt(flagArgs[0]);
-        String certChainFilePath = flagArgs[1];
-        String privateKeyFilePath = flagArgs[2];
-        String trustCertCollectionFilePath = flagArgs[3];
+        int port = Integer.parseInt(args[0]);
+        String certChainFilePath = args[1];
+        String privateKeyFilePath = args[2];
+        String trustCertCollectionFilePath = args[3];
 
         final HelloWorldServerTls server = new HelloWorldServerTls(
             port, certChainFilePath, privateKeyFilePath, trustCertCollectionFilePath);

@@ -45,7 +45,8 @@ public class HelloWorldClientTls {
     private static final Logger logger = Logger.getLogger(HelloWorldClientTls.class.getName());
 
     private final ManagedChannel channel;
-    private final GreeterGrpc.GreeterBlockingStub blockingStub;
+    private GreeterGrpc.GreeterBlockingStub blockingStub;
+
     /*
     @FlagSpec(name = "server_address", help = "address of the server")
     private static final Flag<String> serverAddr = "localhost:50051";
@@ -56,18 +57,13 @@ public class HelloWorldClientTls {
     @FlagSpec(name = "client_key_pem_path", help = "path to client's private key")
     private static final Flag<String> keyFile = "example-tls/testdata/client.key";
     */
-    private static SslContext buildSslContext(String trustCertCollectionFilePath,
-                                              String clientCertChainFilePath,
-                                              String clientPrivateKeyFilePath) throws SSLException {
+
+    private static SslContext buildSslContext(String clientCertChainFilePath,
+                                              String clientPrivateKeyFilePath,
+                                              String trustCertCollectionFilePath) throws SSLException {
         SslContextBuilder builder = GrpcSslContexts.forClient();
-        /*if (trustCertCollectionFilePath != null) {
-            builder.trustManager(new File(trustCertCollectionFilePath));
-        }
-        if (clientCertChainFilePath != null && clientPrivateKeyFilePath != null) {
-            builder.keyManager(new File(clientCertChainFilePath), new File(clientPrivateKeyFilePath));
-            }*/
         builder.trustManager(new File(trustCertCollectionFilePath));
-        builder.keyManager(new File(clientCertChainFilePath), newFile(clientPrivateKeyFilePath));
+        builder.keyManager(new File(clientCertChainFilePath), new File(clientPrivateKeyFilePath));
         builder.protocols("VERSION_TLS13");
         return builder.build();
     }
@@ -81,8 +77,8 @@ public class HelloWorldClientTls {
 
         this(NettyChannelBuilder.forAddress(host, port)
                 .overrideAuthority("foo.test.google.fr")  /* Only for using provided test certs. */
-                .sslContext(sslContext)
                 .build());
+        blockingStub = GreeterGrpc.newBlockingStub(channel);
     }
 
     /**
@@ -107,7 +103,7 @@ public class HelloWorldClientTls {
         try {
             response = blockingStub.sayHello(request);
         } catch (StatusRuntimeException e) {
-            logger.log(Level.WARNING, "RPC failed: {0}", e.getStatus());
+          logger.log(Level.WARNING, "RPC failed: {0}", e.getStatus());
             return;
         }
         logger.info("Greeting: " + response.getMessage());
@@ -118,20 +114,15 @@ public class HelloWorldClientTls {
      * greeting.
      */
     public static void main(String[] args) throws Exception {
+        // ./build/install/example-tls/bin/hello-world/tls/client localhost:50051 /testdata/client.pem testdata/client.key testdata/ca.pem
+        //String[] args = Flags.parseAndReturnLeftovers(args);
 
-        String[] flagArgs = Flags.parseAndReturnLeftovers(args);
+        String host = args[0].substring(0,args[0].indexOf(':'));
+        int port = Integer.parseInt(args[0].substring(args[0].indexOf(':')+1,args[0].length()));
+        String certChainFilePath = args[1];
+        String privateKeyFilePath = args[2];
+        String trustCertCollectionFilePath = args[3];
 
-        for (String flag: flagArgs){
-          logger.log(flagArgs);
-        }
-
-        String host = flagArgs[0].substring(0,flagArgs[0].indexOf(':'));
-        int port = Integer.parseInt(flagArgs[0].substring(flagArgs[0].indexOf(':'),flagArgs[0].length()));
-        String certChainFilePath = flagArgs[1];
-        String privateKeyFilePath = flagArgs[2];
-        String trustCertCollectionFilePath = flagArgs[3];
-
-            //fix buildsslcontext!
         HelloWorldClientTls client= new HelloWorldClientTls(host, port,
             buildSslContext(certChainFilePath, privateKeyFilePath, trustCertCollectionFilePath));
 
