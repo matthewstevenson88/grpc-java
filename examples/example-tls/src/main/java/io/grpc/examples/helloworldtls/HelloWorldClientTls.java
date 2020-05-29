@@ -64,8 +64,10 @@ public class HelloWorldClientTls {
         SslContextBuilder builder = GrpcSslContexts.forClient();
         builder.trustManager(new File(trustCertCollectionFilePath));
         builder.keyManager(new File(clientCertChainFilePath), new File(clientPrivateKeyFilePath));
-        builder.protocols("VERSION_TLS13");
-        return builder.build();
+        //builder.protocols(new String[]{"1.3"});
+        SslContext context = builder.build();
+        System.out.println(context.nextProtocols());
+        return context;
     }
 
     /**
@@ -76,9 +78,9 @@ public class HelloWorldClientTls {
                                SslContext sslContext) throws SSLException {
 
         this(NettyChannelBuilder.forAddress(host, port)
-                .overrideAuthority("foo.test.google.fr")  /* Only for using provided test certs. */
-                .build());
-        blockingStub = GreeterGrpc.newBlockingStub(channel);
+            .sslContext(sslContext)
+            .build());
+        //blockingStub = GreeterGrpc.newBlockingStub(channel);
     }
 
     /**

@@ -81,7 +81,7 @@ public class HelloWorldServerTls {
         if (trustCertCollectionFilePath != null) {
             sslClientContextBuilder.trustManager(new File(trustCertCollectionFilePath));
             sslClientContextBuilder.clientAuth(ClientAuth.REQUIRE);
-            sslClientContextBuilder.protocols("VERSION_TLS13");
+            sslClientContextBuilder.protocols(new String[] {"1.3"});
         }
         return GrpcSslContexts.configure(sslClientContextBuilder);
     }
