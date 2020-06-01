@@ -32,11 +32,13 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.logging.Logger;
 
+// TODO: change flags to use com.google.common.flags
+
 /**
  * Server that manages startup/shutdown of a {@code Greeter} server with TLS enabled.
  */
-public class HelloWorldServerTls {
-    private static final Logger logger = Logger.getLogger(HelloWorldServerTls.class.getName());
+public class HelloWorldServerS2A {
+    private static final Logger logger = Logger.getLogger(HelloWorldServerS2A.class.getName());
 
     private Server server;
 
@@ -45,10 +47,10 @@ public class HelloWorldServerTls {
     private final String privateKeyFilePath;
     private final String trustCertCollectionFilePath;
 
-    public HelloWorldServerTls(int port,
-                               String certChainFilePath,
-                               String privateKeyFilePath,
-                               String trustCertCollectionFilePath) {
+    public HelloWorldServerS2A(int port,
+                             String certChainFilePath,
+                             String privateKeyFilePath,
+                             String trustCertCollectionFilePath) {
         this.port = port;
         this.certChainFilePath = certChainFilePath;
         this.privateKeyFilePath = privateKeyFilePath;
@@ -56,28 +58,29 @@ public class HelloWorldServerTls {
     }
 
     private SslContextBuilder getSslContextBuilder() {
-        SslContextBuilder sslClientContextBuilder = SslContextBuilder.forServer(new File(certChainFilePath),
-                new File(privateKeyFilePath));
+      SslContextBuilder sslClientContextBuilder = SslContextBuilder.forServer(new File(certChainFilePath), new File(privateKeyFilePath));
         if (trustCertCollectionFilePath != null) {
             sslClientContextBuilder.trustManager(new File(trustCertCollectionFilePath));
             sslClientContextBuilder.clientAuth(ClientAuth.REQUIRE);
+            sslClientContextBuilder.protocols("TLSv1.3");
         }
         return GrpcSslContexts.configure(sslClientContextBuilder);
     }
 
     private void start() throws IOException {
         server = NettyServerBuilder.forPort(port)
-                .addService(new GreeterImpl())
                 .sslContext(getSslContextBuilder().build())
+                .addService(new GreeterImpl())
                 .build()
                 .start();
+
         logger.info("Server started, listening on " + port);
         Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override
             public void run() {
                 // Use stderr here since the logger may have been reset by its JVM shutdown hook.
                 System.err.println("*** shutting down gRPC server since JVM is shutting down");
-                HelloWorldServerTls.this.stop();
+                HelloWorldServerS2A.this.stop();
                 System.err.println("*** server shut down");
             }
         });
@@ -103,19 +106,13 @@ public class HelloWorldServerTls {
      */
     public static void main(String[] args) throws IOException, InterruptedException {
 
-        if (args.length < 3 || args.length > 4) {
-            System.out.println(
-                    "USAGE: HelloWorldServerTls port certChainFilePath privateKeyFilePath " +
-                    "[trustCertCollectionFilePath]\n  Note: You only need to supply trustCertCollectionFilePath if you want " +
-                    "to enable Mutual TLS.");
-            System.exit(0);
-        }
+        int port = Integer.parseInt(args[0]);
+        String certChainFilePath = args[1];
+        String privateKeyFilePath = args[2];
+        String trustCertCollectionFilePath = args[3];
 
-        final HelloWorldServerTls server = new HelloWorldServerTls(
-                Integer.parseInt(args[0]),
-                args[1],
-                args[2],
-                args.length == 4 ? args[3] : null);
+        final HelloWorldServerS2A server = new HelloWorldServerS2A(
+            port, certChainFilePath, privateKeyFilePath, trustCertCollectionFilePath);
         server.start();
         server.blockUntilShutdown();
     }
