@@ -64,10 +64,8 @@ public class HelloWorldClientTls {
         SslContextBuilder builder = GrpcSslContexts.forClient();
         builder.trustManager(new File(trustCertCollectionFilePath));
         builder.keyManager(new File(clientCertChainFilePath), new File(clientPrivateKeyFilePath));
-        //builder.protocols(new String[]{"1.3"});
-        SslContext context = builder.build();
-        System.out.println(context.nextProtocols());
-        return context;
+        builder.protocols(new String[]{"TLSv1.3"});
+        return builder.build();
     }
 
     /**
@@ -80,7 +78,6 @@ public class HelloWorldClientTls {
         this(NettyChannelBuilder.forAddress(host, port)
             .sslContext(sslContext)
             .build());
-        //blockingStub = GreeterGrpc.newBlockingStub(channel);
     }
 
     /**
@@ -116,7 +113,7 @@ public class HelloWorldClientTls {
      * greeting.
      */
     public static void main(String[] args) throws Exception {
-        // ./build/install/example-tls/bin/hello-world/tls/client localhost:50051 /testdata/client.pem testdata/client.key testdata/ca.pem
+        // ./build/install/example-tls/bin/hello-world-tls-client localhost:50440 testdata/client.pem testdata/client.key testdata/ca.pem
         //String[] args = Flags.parseAndReturnLeftovers(args);
 
         String host = args[0].substring(0,args[0].indexOf(':'));

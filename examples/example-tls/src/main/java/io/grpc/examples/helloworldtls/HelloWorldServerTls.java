@@ -76,19 +76,19 @@ public class HelloWorldServerTls {
     }
 
     private SslContextBuilder getSslContextBuilder() {
-        SslContextBuilder sslClientContextBuilder = SslContextBuilder.forServer(new File(privateKeyFilePath),
-            new File(certChainFilePath));
+      SslContextBuilder sslClientContextBuilder = SslContextBuilder.forServer(new File(certChainFilePath), new File(privateKeyFilePath));
         if (trustCertCollectionFilePath != null) {
             sslClientContextBuilder.trustManager(new File(trustCertCollectionFilePath));
             sslClientContextBuilder.clientAuth(ClientAuth.REQUIRE);
-            sslClientContextBuilder.protocols(new String[] {"1.3"});
+            sslClientContextBuilder.protocols(new String[] {"TLSv1.3"});
         }
         return GrpcSslContexts.configure(sslClientContextBuilder);
     }
 
     private void start() throws IOException {
        server = NettyServerBuilder.forPort(port)
-                .useTransportSecurity(new File(certChainFilePath), new File(privateKeyFilePath))
+                //.useTransportSecurity(new File(certChainFilePath), new File(privateKeyFilePath))
+                .sslContext(getSslContextBuilder().build())
                 .addService(new GreeterImpl())
                .build()
                .start();
