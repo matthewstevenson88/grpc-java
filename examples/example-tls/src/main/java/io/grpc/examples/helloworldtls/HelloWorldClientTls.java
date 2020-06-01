@@ -30,12 +30,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.net.ssl.SSLException;
+
+// TODO: change flags to use com.google.common.flags
 /*
 import com.google.common.flags.Flag;
 import com.google.common.flags.FlagSpec;
 import com.google.common.flags.Flags;
 */
-// TODO: change flags to use com.google.common.flags
+
 
 
 /**
@@ -51,11 +53,11 @@ public class HelloWorldClientTls {
     @FlagSpec(name = "server_address", help = "address of the server")
     private static final Flag<String> serverAddr = "localhost:50051";
     @FlagSpec(name = "server_root_cert_pem_path", help = "path to the root X509 certificate")
-    private static final Flag<String> rootCert = "example-tls/testdata/ca.cert";
+    private static final Flag<String> rootCert = "testdata/ca.cert";
     @FlagSpec(name = "client_cert_pem_path", help = "path to client's X509 certificate")
-    private static final Flag<String> certFile = "example-tls/testdata/client.server";
+    private static final Flag<String> certFile = "testdata/client.server";
     @FlagSpec(name = "client_key_pem_path", help = "path to client's private key")
-    private static final Flag<String> keyFile = "example-tls/testdata/client.key";
+    private static final Flag<String> keyFile = "testdata/client.key";
     */
 
     private static SslContext buildSslContext(String clientCertChainFilePath,
@@ -113,8 +115,7 @@ public class HelloWorldClientTls {
      * greeting.
      */
     public static void main(String[] args) throws Exception {
-        // ./build/install/example-tls/bin/hello-world-tls-client localhost:50440 testdata/client.pem testdata/client.key testdata/ca.pem
-        //String[] args = Flags.parseAndReturnLeftovers(args);
+        // run using: ./build/install/example-tls/bin/hello-world-tls-client localhost:50051 testdata/client.pem testdata/client.key testdata/ca.pem
 
         String host = args[0].substring(0,args[0].indexOf(':'));
         int port = Integer.parseInt(args[0].substring(args[0].indexOf(':')+1,args[0].length()));

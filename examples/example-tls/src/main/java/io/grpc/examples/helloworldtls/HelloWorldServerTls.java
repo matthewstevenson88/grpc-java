@@ -32,14 +32,12 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.logging.Logger;
 
+// TODO: cange flags to use com.google.common.flags
 /*
 import com.google.common.flags.Flag;
 import com.google.common.flags.FlagSpec;
 import com.google.common.flags.Flags;
 */
-
-// TODO: change flags to use com.google.common.flags
-
 
 /**
  * Server that manages startup/shutdown of a {@code Greeter} server with TLS enabled.
@@ -58,14 +56,14 @@ public class HelloWorldServerTls {
     @FlagSpec(name = "port", help = "port number to use for connection")
     private static final Flag<String> portFlag = "50051";
     @FlagSpec(name = "client_root_cert_pem_path", help = "path to root X509 certificate")
-    private static final Flag<String> rootCert = "example-tls/testdata/ca.cert";
+    private static final Flag<String> rootCert = "testdata/ca.cert";
     @FlagSpec(name = "server_cert_pem_path", help = "path to server's X509 certificate")
-    private static final Flag<String> certFile = "example-tls/testdata/service.pem";
+    private static final Flag<String> certFile = "testdata/service.pem";
     @FlagSpec(name = "server_key_pem_path", help = "path to server's private key")
-    private static final Flag<String> keyFile = "example-tls/testdata/service.key";
+    private static final Flag<String> keyFile = "testdata/service.key";
     */
 
-  public HelloWorldServerTls(int port,
+    public HelloWorldServerTls(int port,
                              String certChainFilePath,
                              String privateKeyFilePath,
                              String trustCertCollectionFilePath) {
@@ -86,12 +84,11 @@ public class HelloWorldServerTls {
     }
 
     private void start() throws IOException {
-       server = NettyServerBuilder.forPort(port)
-                //.useTransportSecurity(new File(certChainFilePath), new File(privateKeyFilePath))
+        server = NettyServerBuilder.forPort(port)
                 .sslContext(getSslContextBuilder().build())
                 .addService(new GreeterImpl())
-               .build()
-               .start();
+                .build()
+                .start();
 
         logger.info("Server started, listening on " + port);
         Runtime.getRuntime().addShutdownHook(new Thread() {
@@ -124,8 +121,7 @@ public class HelloWorldServerTls {
      * Main launches the server from the command line.
      */
     public static void main(String[] args) throws IOException, InterruptedException {
-        // ./build/install/example-tls/bin/hello-world-tls-server 50051 testdata/service.pem testdata/service.key testdata/ca.pem
-        //String[] args = Flags.parseAndReturnLeftovers(args);
+        // run using: ./build/install/example-tls/bin/hello-world-tls-server 50051 testdata/service.pem testdata/service.key testdata/ca.pem
 
         int port = Integer.parseInt(args[0]);
         String certChainFilePath = args[1];
