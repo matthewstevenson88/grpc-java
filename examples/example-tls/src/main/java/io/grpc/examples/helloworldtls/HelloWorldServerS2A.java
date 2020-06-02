@@ -38,7 +38,6 @@ import java.util.logging.Logger;
 
 /**
  * Server that manages startup/shutdown of a Greeter  server with TLS 1.3 enabled.
- *
  */
 public class HelloWorldServerS2A {
     private static final Logger logger = Logger.getLogger(HelloWorldServerS2A.class.getName());
@@ -73,7 +72,7 @@ public class HelloWorldServerS2A {
                 .build()
                 .start();
 
-        logger.info("Server started, listening at address " + port);
+        logger.info("Server started, listening at address " + "localhost:"+ port);
         Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override
             public void run() {
@@ -104,7 +103,6 @@ public class HelloWorldServerS2A {
                              String certChainFilePath,
                              String privateKeyFilePath,
                              String trustCertCollectionFilePath) {
-        checkNotNull(port, "port should not be Null");
         checkNotNull(certChainFilePath, "certChainFilePath should not be Null");
         checkNotNull(privateKeyFilePath, "privateKeyFilePath should not be Null");
         checkNotNull(trustCertCollectionFilePath, "trustCertCollectionFilePath should not be Null");
@@ -115,15 +113,27 @@ public class HelloWorldServerS2A {
     }
 
     /**
-     * Main launches the server from the command line.
+     * Stars a greeter service
      *
      * args:
-     * [port]
-     * [certChainFilePath] File Path to Server Certificate
-     * [privateKeyFilePath] File Path to Server Private Key
-     * [trustCertCollectionFilePath] File Path to CA Certificate
+     * @param arg[0] contains the server port
+     * @param arg[1] contains the file path to the server certificate
+     * @param arg[2] contains the file path to the server private key
+     * @param arg[3] contains the file path to the CA certificate
      */
     public static void main(String[] args) throws IOException, InterruptedException {
+        String[] defaultArgs = new String[]{
+          "50051",
+          "testdata/service.pem",
+          "testdata/service.key",
+          "testdata/ca.pem"};
+
+        //Check if the args are missing information
+        if (args.length != defaultArgs.length){
+          System.out.println("Arguments invalid; Using default arguments");
+          args = defaultArgs;
+        }
+
         HelloWorldServerS2A server = HelloWorldServerS2A.create(
             Integer.parseInt(args[0]), args[1], args[2], args[3]);
         server.start();

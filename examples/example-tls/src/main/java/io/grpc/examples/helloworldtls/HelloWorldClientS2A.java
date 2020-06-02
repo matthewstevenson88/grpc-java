@@ -38,7 +38,6 @@ import javax.annotation.Nonnull;
 
 /**
  * Establishes a TLS 1.3 connection with a greeter service.
- *
  */
 public class HelloWorldClientS2A {
     private static final Logger logger = Logger.getLogger(HelloWorldClientS2A.class.getName());
@@ -83,7 +82,6 @@ public class HelloWorldClientS2A {
 
     private static HelloWorldClientS2A create(String host, int port, SslContext sslContext) throws SSLException {
         checkNotNull(host, "host should not be Null");
-        checkNotNull(port,"port should not be Null");
         checkNotNull(sslContext, "SslContext should not be Null");
         ManagedChannel channel = NettyChannelBuilder.forAddress(host,port)
                         .sslContext(sslContext)
@@ -95,12 +93,24 @@ public class HelloWorldClientS2A {
      * Sends a {@code HelloRequest} to a greeter service.
      *
      * args:
-     * [ServerAddress] In the form of host:port
-     * [clientCertChainFilePath] File Path to Client Certificate
-     * [clientPrivateKeyFilePath] File Path to Client Key
-     * [trustCertCollectionFilePath] File Path to CA Certificate
+     * @param arg[0] contains the server address in the form of host:port
+     * @param arg[1] contains the file path to the client certificate
+     * @param arg[2] contains the file path to the client's private key
+     * @param arg[3] contains the file path to the CA certificate
      */
     public static void main(String[] args) throws SSLException, InterruptedException {
+        String[] defaultArgs = new String[] {
+          "localhost:50051",
+          "testdata/client.pem",
+          "testdata/client.key",
+          "testdata/ca.pem"};
+
+        //Check if the args are missing information
+        if (args.length != defaultArgs.length){
+            System.out.println("Arguments invalid; Using default arguments");
+            args = defaultArgs;
+        }
+
         HelloWorldClientS2A client= HelloWorldClientS2A.create(
                 args[0].substring(0,args[0].indexOf(':')),
                 Integer.parseInt(args[0].substring(args[0].indexOf(':')+1,args[0].length())),
@@ -108,7 +118,7 @@ public class HelloWorldClientS2A {
         try {
             client.greet(args[0].substring(0,args[0].indexOf(':')));
         } finally {
-           client.shutdown();
+            client.shutdown();
         }
     }
 }
