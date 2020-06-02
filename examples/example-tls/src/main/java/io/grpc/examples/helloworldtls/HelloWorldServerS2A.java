@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 The gRPC Authors
+ * Copyright 2020 The gRPC Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
  */
 
 package io.grpc.examples.helloworldtls;
+
+import static com.google.common.base.Preconditions.checkNotNull;
 
 import io.grpc.Server;
 import io.grpc.examples.helloworld.GreeterGrpc;
@@ -35,19 +37,23 @@ import java.util.logging.Logger;
 // TODO: change flags to use com.google.common.flags
 
 /**
- * Server that manages startup/shutdown of a {@code Greeter} server with TLS enabled.
+ * Server that manages startup/shutdown of a {@code Greeter} server with TLS 1.3 enabled.
+ *
+ * args:
+ * [port]
+ * [certChainFilePath] File Path to Server Certificate
+ * [privateKeyFilePath] File Path to Server Private Key
+ * [trustCertCollectionFilePath] File Path to CA Certificate
  */
 public class HelloWorldServerS2A {
     private static final Logger logger = Logger.getLogger(HelloWorldServerS2A.class.getName());
-
     private Server server;
-
     private final int port;
     private final String certChainFilePath;
     private final String privateKeyFilePath;
     private final String trustCertCollectionFilePath;
 
-    public HelloWorldServerS2A(int port,
+    private HelloWorldServerS2A(int port,
                              String certChainFilePath,
                              String privateKeyFilePath,
                              String trustCertCollectionFilePath) {
@@ -101,24 +107,30 @@ public class HelloWorldServerS2A {
         }
     }
 
+    private static HelloWorldServerS2A create(int port,
+                             String certChainFilePath,
+                             String privateKeyFilePath,
+                             String trustCertCollectionFilePath) {
+        checkNotNull(port, "port");
+        checkNotNull(certChainFilePath, "certChainFilePath");
+        checkNotNull(trustCertCollectionFilePath, "trustCertCollectionFilePath");
+        return new HelloWorldServerS2A(port,
+            certChainFilePath,
+            privateKeyFilePath,
+            trustCertCollectionFilePath);
+    }
+
     /**
      * Main launches the server from the command line.
      */
     public static void main(String[] args) throws IOException, InterruptedException {
-
-        int port = Integer.parseInt(args[0]);
-        String certChainFilePath = args[1];
-        String privateKeyFilePath = args[2];
-        String trustCertCollectionFilePath = args[3];
-
-        final HelloWorldServerS2A server = new HelloWorldServerS2A(
-            port, certChainFilePath, privateKeyFilePath, trustCertCollectionFilePath);
+        HelloWorldServerS2A server = HelloWorldServerS2A.create(
+            Integer.parseInt(args[0]), args[1], args[2], args[3]);
         server.start();
         server.blockUntilShutdown();
     }
 
     static class GreeterImpl extends GreeterGrpc.GreeterImplBase {
-
         @Override
         public void sayHello(HelloRequest req, StreamObserver<HelloReply> responseObserver) {
             HelloReply reply = HelloReply.newBuilder().setMessage("Hello " + req.getName()).build();

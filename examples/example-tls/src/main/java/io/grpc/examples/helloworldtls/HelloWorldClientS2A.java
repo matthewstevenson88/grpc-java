@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 The gRPC Authors
+ * Copyright 2020 The gRPC Authors
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
 
 package io.grpc.examples.helloworldtls;
 
+import static com.google.common.base.Preconditions.checkNotNull;
+
 import io.grpc.ManagedChannel;
 import io.grpc.StatusRuntimeException;
 import io.grpc.examples.helloworld.GreeterGrpc;
@@ -30,11 +32,18 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.net.ssl.SSLException;
+import javax.annotation.Nonnull;
 
 // TODO: change flags to use com.google.common.flags
 
 /**
- * Requests a greeting from the server with TLS 1.3.
+ * Establishes a TLS 1.3 connection with a greeter service.
+ *
+ * args:
+ * [ServerAddress] In the form of host:port
+ * [clientCertChainFilePath] File Path to Client Certificate
+ * [clientPrivateKeyFilePath] File Path to Client Key
+ * [trustCertCollectionFilePath] File Path to CA Certificate
  */
 public class HelloWorldClientS2A {
     private static final Logger logger = Logger.getLogger(HelloWorldClientS2A.class.getName());
@@ -44,7 +53,10 @@ public class HelloWorldClientS2A {
     private static SslContext buildSslContext(String clientCertChainFilePath,
                                               String clientPrivateKeyFilePath,
                                               String trustCertCollectionFilePath) throws SSLException {
-        return GrpcSslContexts.forClient()
+      checkNotNull(clientCertChainFilePath, "clientCertChainFilePath");
+      checkNotNull(clientPrivateKeyFilePath, "clientPrivateKeyFilePath");
+      checkNotNull(trustCertCollectionFilePath, " trustCertCollectionFilePath");
+      return GrpcSslContexts.forClient()
             .trustManager(new File(trustCertCollectionFilePath))
             .keyManager(new File(clientCertChainFilePath), new File(clientPrivateKeyFilePath))
             .protocols("TLSv1.3")
@@ -52,21 +64,21 @@ public class HelloWorldClientS2A {
     }
 
     /**
-     * Construct client for accessing RouteGuide server using the existing channel.
+     * Constructs client for accessing greeter server using the existing channel.
      */
-    HelloWorldClientS2A(ManagedChannel channel) {
+    private HelloWorldClientS2A(ManagedChannel channel, GreeterGrpc.GreeterBlockingStub blockingStub) {
         this.channel = channel;
-        blockingStub = GreeterGrpc.newBlockingStub(channel);
+        this.blockingStub = blockingStub;
     }
 
-    public void shutdown() throws InterruptedException {
+    private void shutdown() throws InterruptedException {
         channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
     }
 
     /**
      * Say hello to server.
      */
-    public void greet(String name) {
+    private void greet(String name) {
         logger.info("Will try to greet " + name + " ...");
         HelloRequest request = HelloRequest.newBuilder().setName(name).build();
         HelloReply response;
@@ -79,29 +91,26 @@ public class HelloWorldClientS2A {
         logger.info("Greeting: " + response.getMessage());
     }
 
-    public static HelloWorldClientS2A createUsingChannel(String host, int port, SslContext sslContext) throws SSLException{
-      return new HelloWorldClientS2A(NettyChannelBuilder.forAddress(host,port)
-          .sslContext(sslContext)
-          .build());
+    private static HelloWorldClientS2A create(String host, int port, SslContext sslContext) throws SSLException{
+        checkNotNull(host, "host");
+        checkNotNull(port,"port");
+        ManagedChannel channel = NettyChannelBuilder.forAddress(host,port)
+                        .sslContext(sslContext)
+                        .build();
+        return new HelloWorldClientS2A(channel, GreeterGrpc.newBlockingStub(channel));
     }
 
     /**
      * Greet server. If provided, the first element of {@code args} is the name to use in the
      * greeting.
      */
-    public static void main(String[] args) throws Exception {
-
-        String host = args[0].substring(0,args[0].indexOf(':'));
-        int port = Integer.parseInt(args[0].substring(args[0].indexOf(':')+1,args[0].length()));
-        String certChainFilePath = args[1];
-        String privateKeyFilePath = args[2];
-        String trustCertCollectionFilePath = args[3];
-
-        HelloWorldClientS2A client= HelloWorldClientS2A.createUsingChannel(host, port,
-            buildSslContext(certChainFilePath, privateKeyFilePath, trustCertCollectionFilePath));
-
+    public static void main(String[] args) throws SSLException, InterruptedException {
+        HelloWorldClientS2A client= HelloWorldClientS2A.create(
+                args[0].substring(0,args[0].indexOf(':')),
+                Integer.parseInt(args[0].substring(args[0].indexOf(':')+1,args[0].length())),
+                buildSslContext(args[1], args[2], args[3]));;
         try {
-            client.greet(host);
+            client.greet(args[0].substring(0,args[0].indexOf(':')));
         } finally {
             client.shutdown();
         }
