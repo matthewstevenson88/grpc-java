@@ -23,15 +23,15 @@ targetCompatibility = 1.7
 
 // Feel free to delete the comment at the next line. It is just for safely
 // updating the version in our release process.
-def grpcVersion = '1.31.0-SNAPSHOT' // CURRENT_GRPC_VERSION
+def grpcVersion = '1.29.0' // CURRENT_GRPC_VERSION
 def nettyTcNativeVersion = '2.0.30.Final'
-def protocVersion = '3.12.0'
+def protocVersion = '3.11.0'
 
 dependencies {
     implementation "io.grpc:grpc-netty:${grpcVersion}"
     implementation "io.grpc:grpc-protobuf:${grpcVersion}"
     implementation "io.grpc:grpc-stub:${grpcVersion}"
-    compileOnly "org.apache.tomcat:annotations-api:6.0.53"
+    compileOnly "javax.annotation:javax.annotation-api:1.2"
     runtimeOnly "io.netty:netty-tcnative-boringssl-static:${nettyTcNativeVersion}"
 }
 
@@ -71,8 +71,24 @@ task helloWorldTlsClient(type: CreateStartScripts) {
     classpath = startScripts.classpath
 }
 
+task helloWorldS2AServer(type: CreateStartScripts) {
+    mainClassName = 'io.grpc.examples.helloworldtls.HelloWorldServerS2A'
+    applicationName = 'hello-world-s2a-server'
+    outputDir = new File(project.buildDir, 'tmp')
+    classpath = startScripts.classpath
+}
+
+task helloWorldS2AClient(type: CreateStartScripts) {
+    mainClassName = 'io.grpc.examples.helloworldtls.HelloWorldClientS2A'
+    applicationName = 'hello-world-s2a-client'
+    outputDir = new File(project.buildDir, 'tmp')
+    classpath = startScripts.classpath
+}
+
 applicationDistribution.into('bin') {
     from(helloWorldTlsServer)
     from(helloWorldTlsClient)
+    from(helloWorldS2AServer)
+    from(helloWorldS2AClient)
     fileMode = 0755
 }
