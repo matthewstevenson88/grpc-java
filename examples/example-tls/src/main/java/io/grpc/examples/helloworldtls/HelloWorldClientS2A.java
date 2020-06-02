@@ -39,11 +39,6 @@ import javax.annotation.Nonnull;
 /**
  * Establishes a TLS 1.3 connection with a greeter service.
  *
- * args:
- * [ServerAddress] In the form of host:port
- * [clientCertChainFilePath] File Path to Client Certificate
- * [clientPrivateKeyFilePath] File Path to Client Key
- * [trustCertCollectionFilePath] File Path to CA Certificate
  */
 public class HelloWorldClientS2A {
     private static final Logger logger = Logger.getLogger(HelloWorldClientS2A.class.getName());
@@ -53,9 +48,9 @@ public class HelloWorldClientS2A {
     private static SslContext buildSslContext(String clientCertChainFilePath,
                                               String clientPrivateKeyFilePath,
                                               String trustCertCollectionFilePath) throws SSLException {
-      checkNotNull(clientCertChainFilePath, "clientCertChainFilePath");
-      checkNotNull(clientPrivateKeyFilePath, "clientPrivateKeyFilePath");
-      checkNotNull(trustCertCollectionFilePath, " trustCertCollectionFilePath");
+      checkNotNull(clientCertChainFilePath, "clientCertChainFilePath should not be Null");
+      checkNotNull(clientPrivateKeyFilePath, "clientPrivateKeyFilePath should not be Null");
+      checkNotNull(trustCertCollectionFilePath, " trustCertCollectionFilePath should not be Null");
       return GrpcSslContexts.forClient()
             .trustManager(new File(trustCertCollectionFilePath))
             .keyManager(new File(clientCertChainFilePath), new File(clientPrivateKeyFilePath))
@@ -71,29 +66,25 @@ public class HelloWorldClientS2A {
         this.blockingStub = blockingStub;
     }
 
-    private void shutdown() throws InterruptedException {
+    public void shutdown() throws InterruptedException {
         channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
     }
 
     /**
-     * Say hello to server.
+     * Says hello to a greeter server.
      */
     private void greet(String name) {
+        checkNotNull(name, "name should not be Null");
         logger.info("Will try to greet " + name + " ...");
         HelloRequest request = HelloRequest.newBuilder().setName(name).build();
-        HelloReply response;
-        try {
-            response = blockingStub.sayHello(request);
-        } catch (StatusRuntimeException e) {
-          logger.log(Level.WARNING, "RPC failed: {0}", e.getStatus());
-            return;
-        }
+        HelloReply response = blockingStub.sayHello(request);
         logger.info("Greeting: " + response.getMessage());
     }
 
-    private static HelloWorldClientS2A create(String host, int port, SslContext sslContext) throws SSLException{
-        checkNotNull(host, "host");
-        checkNotNull(port,"port");
+    private static HelloWorldClientS2A create(String host, int port, SslContext sslContext) throws SSLException {
+        checkNotNull(host, "host should not be Null");
+        checkNotNull(port,"port should not be Null");
+        checkNotNull(sslContext, "SslContext should not be Null");
         ManagedChannel channel = NettyChannelBuilder.forAddress(host,port)
                         .sslContext(sslContext)
                         .build();
@@ -101,8 +92,13 @@ public class HelloWorldClientS2A {
     }
 
     /**
-     * Greet server. If provided, the first element of {@code args} is the name to use in the
-     * greeting.
+     * Sends a {@code HelloRequest} to a greeter service.
+     *
+     * args:
+     * [ServerAddress] In the form of host:port
+     * [clientCertChainFilePath] File Path to Client Certificate
+     * [clientPrivateKeyFilePath] File Path to Client Key
+     * [trustCertCollectionFilePath] File Path to CA Certificate
      */
     public static void main(String[] args) throws SSLException, InterruptedException {
         HelloWorldClientS2A client= HelloWorldClientS2A.create(
@@ -112,7 +108,7 @@ public class HelloWorldClientS2A {
         try {
             client.greet(args[0].substring(0,args[0].indexOf(':')));
         } finally {
-            client.shutdown();
+           client.shutdown();
         }
     }
 }

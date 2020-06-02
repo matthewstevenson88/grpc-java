@@ -37,13 +37,8 @@ import java.util.logging.Logger;
 // TODO: change flags to use com.google.common.flags
 
 /**
- * Server that manages startup/shutdown of a {@code Greeter} server with TLS 1.3 enabled.
+ * Server that manages startup/shutdown of a Greeter  server with TLS 1.3 enabled.
  *
- * args:
- * [port]
- * [certChainFilePath] File Path to Server Certificate
- * [privateKeyFilePath] File Path to Server Private Key
- * [trustCertCollectionFilePath] File Path to CA Certificate
  */
 public class HelloWorldServerS2A {
     private static final Logger logger = Logger.getLogger(HelloWorldServerS2A.class.getName());
@@ -65,11 +60,9 @@ public class HelloWorldServerS2A {
 
     private SslContextBuilder getSslContextBuilder() {
       SslContextBuilder sslClientContextBuilder = SslContextBuilder.forServer(new File(certChainFilePath), new File(privateKeyFilePath));
-        if (trustCertCollectionFilePath != null) {
-            sslClientContextBuilder.trustManager(new File(trustCertCollectionFilePath));
-            sslClientContextBuilder.clientAuth(ClientAuth.REQUIRE);
-            sslClientContextBuilder.protocols("TLSv1.3");
-        }
+        sslClientContextBuilder.trustManager(new File(trustCertCollectionFilePath));
+        sslClientContextBuilder.clientAuth(ClientAuth.REQUIRE);
+        sslClientContextBuilder.protocols("TLSv1.3");
         return GrpcSslContexts.configure(sslClientContextBuilder);
     }
 
@@ -80,14 +73,14 @@ public class HelloWorldServerS2A {
                 .build()
                 .start();
 
-        logger.info("Server started, listening on " + port);
+        logger.info("Server started, listening at address " + port);
         Runtime.getRuntime().addShutdownHook(new Thread() {
             @Override
             public void run() {
                 // Use stderr here since the logger may have been reset by its JVM shutdown hook.
-                System.err.println("*** shutting down gRPC server since JVM is shutting down");
+                System.err.println("shutting down gRPC server since JVM is shutting down");
                 HelloWorldServerS2A.this.stop();
-                System.err.println("*** server shut down");
+                System.err.println("server shut down");
             }
         });
     }
@@ -99,7 +92,7 @@ public class HelloWorldServerS2A {
     }
 
     /**
-     * Await termination on the main thread since the grpc library uses daemon threads.
+     * Awaits termination on the main thread since the grpc library uses daemon threads.
      */
     private void blockUntilShutdown() throws InterruptedException {
         if (server != null) {
@@ -111,9 +104,10 @@ public class HelloWorldServerS2A {
                              String certChainFilePath,
                              String privateKeyFilePath,
                              String trustCertCollectionFilePath) {
-        checkNotNull(port, "port");
-        checkNotNull(certChainFilePath, "certChainFilePath");
-        checkNotNull(trustCertCollectionFilePath, "trustCertCollectionFilePath");
+        checkNotNull(port, "port should not be Null");
+        checkNotNull(certChainFilePath, "certChainFilePath should not be Null");
+        checkNotNull(privateKeyFilePath, "privateKeyFilePath should not be Null");
+        checkNotNull(trustCertCollectionFilePath, "trustCertCollectionFilePath should not be Null");
         return new HelloWorldServerS2A(port,
             certChainFilePath,
             privateKeyFilePath,
@@ -122,6 +116,12 @@ public class HelloWorldServerS2A {
 
     /**
      * Main launches the server from the command line.
+     *
+     * args:
+     * [port]
+     * [certChainFilePath] File Path to Server Certificate
+     * [privateKeyFilePath] File Path to Server Private Key
+     * [trustCertCollectionFilePath] File Path to CA Certificate
      */
     public static void main(String[] args) throws IOException, InterruptedException {
         HelloWorldServerS2A server = HelloWorldServerS2A.create(
@@ -130,7 +130,7 @@ public class HelloWorldServerS2A {
         server.blockUntilShutdown();
     }
 
-    static class GreeterImpl extends GreeterGrpc.GreeterImplBase {
+    private static class GreeterImpl extends GreeterGrpc.GreeterImplBase {
         @Override
         public void sayHello(HelloRequest req, StreamObserver<HelloReply> responseObserver) {
             HelloReply reply = HelloReply.newBuilder().setMessage("Hello " + req.getName()).build();
