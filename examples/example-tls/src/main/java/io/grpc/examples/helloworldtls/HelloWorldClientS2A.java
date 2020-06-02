@@ -105,9 +105,9 @@ public class HelloWorldClientS2A {
           "testdata/client.key",
           "testdata/ca.pem"};
 
-        //Check if the args are missing information
+        // Checks if the args are missing information.
         if (args.length != defaultArgs.length){
-            System.out.println("Arguments invalid; Using default arguments");
+            logger.info("Arguments invalid; Using default arguments");
             args = defaultArgs;
         }
 

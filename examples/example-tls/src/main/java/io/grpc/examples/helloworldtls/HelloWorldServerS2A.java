@@ -113,7 +113,7 @@ public class HelloWorldServerS2A {
     }
 
     /**
-     * Stars a greeter service
+     * Starts a greeter service.
      *
      * args:
      * @param arg[0] contains the server port
@@ -128,7 +128,7 @@ public class HelloWorldServerS2A {
           "testdata/service.key",
           "testdata/ca.pem"};
 
-        //Check if the args are missing information
+        // Checks if the args are missing information.
         if (args.length != defaultArgs.length){
           System.out.println("Arguments invalid; Using default arguments");
           args = defaultArgs;
