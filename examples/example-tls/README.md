@@ -61,6 +61,17 @@ in the test certificates. You can generate your own self-signed certificates wit
 ./build/install/example-tls/bin/hello-world-tls-client localhost 50440 ../../testing/src/main/resources/certs/ca.pem ../../testing/src/main/resources/certs/client.pem ../../testing/src/main/resources/certs/client.key
 ```
 
+#### Hello world example with S2A 
+
+```bash
+# Run the server: 
+# Optional arguments: [port] [server certificate] [server key] [CA certificate]
+./build/install/example-tls/bin/hello-world-s2a-server 
+# In another terminal run the client
+# Optional arguments: [host:port] [client certificate] [client key] [CA certificate]
+./build/install/example-tls/bin/hello-world-s2a-client 
+```
+
 That's it!
 
 ## Maven
