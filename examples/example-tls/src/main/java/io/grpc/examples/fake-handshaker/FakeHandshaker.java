@@ -17,6 +17,10 @@
 package io.grpc.examples.helloworldtls;
 
 import static com.google.common.base.Preconditions.checkNotNull;
+import com.google.net.grpc.s2a.handshaker.S2AServiceGrpc;
+import com.google.net.grpc.s2a.handshaker.SessionReq;
+import com.google.net.grpc.s2a.handshaker.SessionResp;
+
 
 import io.grpc.Server;
 import io.grpc.examples.helloworld.GreeterGrpc;
@@ -50,7 +54,7 @@ public class FakeHandshaker {
 
     private void start() throws IOException {
         server = NettyServerBuilder.forPort(port)
-                .addService(new GreeterImpl())
+                .addService(new HandshakerImpl())
                 .build()
                 .start();
 
@@ -94,23 +98,25 @@ public class FakeHandshaker {
 
         // Checks if the args are missing information.
         if (args.length != defaultArgs.length){
-          System.out.println("Arguments invalid; Using default arguments");
           args = defaultArgs;
         }
 
-        FakeHandshaker server = new FakeHandshaker(port)
+        FakeHandshaker server =  new FakeHandshaker(Integer.parseInt(args[0]));
         server.start();
         server.blockUntilShutdown();
     }
 
-    private static class GreeterImpl extends GreeterGrpc.GreeterImplBase {
+    private static class HandshakerImpl extends S2AServiceGrpc.S2AServiceImplBase {
+        //replace
         @Override
-        public void sayHello(HelloRequest req, StreamObserver<HelloReply> responseObserver) {
-            HelloReply reply = HelloReply.newBuilder().setMessage("Hello " + req.getName()).build();
+        public StreamObserver<SessionReq> setUpSession(StreamObserver<SessionResp> req) {
+            System.out.println("Success");
+            return null;
+            /*HelloReply reply = HelloReply.newBuilder().setMessage("Hello " + req.getName()).build();
             responseObserver.onNext(reply);
-            responseObserver.onCompleted();
+            responseObserver.onCompleted();*/
         }
     }
 
-    
+
 }
