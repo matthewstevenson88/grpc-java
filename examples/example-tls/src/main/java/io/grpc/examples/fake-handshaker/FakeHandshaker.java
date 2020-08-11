@@ -107,14 +107,9 @@ public class FakeHandshaker {
     }
 
     private static class HandshakerImpl extends S2AServiceGrpc.S2AServiceImplBase {
-        //replace
         @Override
         public StreamObserver<SessionReq> setUpSession(StreamObserver<SessionResp> req) {
-            System.out.println("Success");
             return null;
-            /*HelloReply reply = HelloReply.newBuilder().setMessage("Hello " + req.getName()).build();
-            responseObserver.onNext(reply);
-            responseObserver.onCompleted();*/
         }
     }
 
