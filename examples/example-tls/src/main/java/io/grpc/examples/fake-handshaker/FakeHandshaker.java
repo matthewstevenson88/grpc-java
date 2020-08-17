@@ -37,7 +37,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.logging.Logger;
 import java.util.logging.Level;
-import java.util.Arrays;
 
 // TODO: change flags to use com.google.common.flags
 
@@ -104,7 +103,7 @@ public class FakeHandshaker {
     }
 
     private static class FakeS2AImpl extends S2AServiceGrpc.S2AServiceImplBase {
-      private int state;
+      private HandshakeState state;
       private Identity peerIdentity;
       private Identity localIdentity;
       private boolean assistingClient;
@@ -116,6 +115,13 @@ public class FakeHandshaker {
 
       private final String inKey  = "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk";
       private final String outKey = "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj";
+
+      enum HandshakeState {
+        INITIAL,
+        STARTED,
+        SENT,
+        COMPLETED
+      }
 
       @Override
       public StreamObserver<SessionReq> setUpSession(final StreamObserver<SessionResp> stream) {
@@ -148,7 +154,7 @@ public class FakeHandshaker {
 
             private SessionResp processClientStart(SessionReq req){
               SessionResp.Builder resp = SessionResp.newBuilder();
-              if (state != 0){
+              if (state != HandshakeState.INITIAL){
                 resp.setStatus(SessionStatus.newBuilder().setCode(Code.FAILED_PRECONDITION.value())
                   .setDetails("client start handshaker not in initial state").build());
                 return resp.build();
@@ -172,13 +178,13 @@ public class FakeHandshaker {
                 peerIdentity = req.getClientStart().getTargetIdentities(0);
               }
               assistingClient = true;
-              state = 2;
+              state = HandshakeState.SENT;
               return resp.build();
             }
 
             private SessionResp processServerStart(SessionReq req){
               SessionResp.Builder resp = SessionResp.newBuilder();
-              if (state != 0){
+              if (state != HandshakeState.INITIAL){
                 resp.setStatus(SessionStatus.newBuilder().setCode(Code.FAILED_PRECONDITION.value())
                   .setDetails("server start handshaker not in initial state").build());
                 return resp.build();
@@ -196,11 +202,11 @@ public class FakeHandshaker {
               }
               if (req.getServerStart().getInBytes().size() == 0) {
                 resp.setBytesConsumed(0);
-                state = 1;
+                state = HandshakeState.STARTED;
               } else if (req.getServerStart().getInBytes().equals(ByteString.copyFrom(grpcAppProtocol.getBytes()))){
                 resp.setOutFrames(ByteString.copyFrom(serverFrame.getBytes()));
                 resp.setBytesConsumed(clientHelloFrame.length());
-                state = 2;
+                state = HandshakeState.SENT;
               } else {
                 resp.setStatus(SessionStatus.newBuilder().setCode(Code.INTERNAL.value())
                   .setDetails("server start request did not have the correct input bytes").build());
@@ -218,7 +224,7 @@ public class FakeHandshaker {
             private SessionResp processNext(SessionReq req){
               SessionResp.Builder resp = SessionResp.newBuilder();
               if (assistingClient) {
-                if (state != 2) {
+                if (state != HandshakeState.SENT) {
                   resp.setStatus(SessionStatus.newBuilder().setCode(Code.FAILED_PRECONDITION.value())
                     .setDetails("clienthandshaker was not in sent state").build());
                   return resp.build();
@@ -230,9 +236,9 @@ public class FakeHandshaker {
                 }
                 resp.setOutFrames(ByteString.copyFrom(clientFinishedFrame.getBytes()));
                 resp.setBytesConsumed(serverFrame.length());
-                state = 3;
+                state = HandshakeState.COMPLETED;
               } else {
-                if (state == 1){
+                if (state == HandshakeState.STARTED){
                   if (!req.getNext().getInBytes().equals(ByteString.copyFrom(clientHelloFrame.getBytes()))){
                     resp.setStatus(SessionStatus.newBuilder().setCode(Code.INTERNAL.value())
                       .setDetails("server request did not match client hello frame").build());
@@ -240,15 +246,15 @@ public class FakeHandshaker {
                   }
                   resp.setOutFrames(ByteString.copyFrom(serverFrame.getBytes()));
                   resp.setBytesConsumed(clientHelloFrame.length());
-                  state = 3;
-                } else if(state == 2) {
+                  state = HandshakeState.SENT;
+                } else if(state == HandshakeState.SENT) {
                   if (!req.getNext().getInBytes().equals(ByteString.copyFrom(clientFinishedFrame.getBytes()))){
                     resp.setStatus(SessionStatus.newBuilder().setCode(Code.INTERNAL.value())
                       .setDetails("server request did not match client finished frame").build());
                     return resp.build();
                   }
                   resp.setBytesConsumed(clientFinishedFrame.length());
-                  state = 4;
+                  state = HandshakeState.COMPLETED;
                 } else {
                   resp.setStatus(SessionStatus.newBuilder().setCode(Code.FAILED_PRECONDITION.value())
                     .setDetails("server request was not in expected state").build());
@@ -256,7 +262,7 @@ public class FakeHandshaker {
                 }
               }
               resp.setStatus(SessionStatus.newBuilder().setCode(Code.OK.value()).build());
-              if (state == 4){
+              if (state == HandshakeState.COMPLETED){
                 resp.setResult(getSessionResult());
               }
               return resp.build();
