@@ -138,7 +138,6 @@ public class FakeHandshaker {
               } else {
                 logger.log(Level.WARNING,"Session request has unexpected type: "+req.getClass());
               }
-                
               stream.onNext(resp);
             }
 
@@ -226,7 +225,7 @@ public class FakeHandshaker {
               if (assistingClient) {
                 if (state != HandshakeState.SENT) {
                   resp.setStatus(SessionStatus.newBuilder().setCode(Code.FAILED_PRECONDITION.value())
-                    .setDetails("clienthandshaker was not in sent state").build());
+                    .setDetails("client handshaker was not in sent state").build());
                   return resp.build();
                 }
                 if (!req.getNext().getInBytes().equals(ByteString.copyFrom(serverFrame.getBytes()))){
@@ -269,15 +268,13 @@ public class FakeHandshaker {
             }
 
             private SessionResult getSessionResult(){
-              SessionResult.Builder res = SessionResult.newBuilder();
-              res.setApplicationProtocol(grpcAppProtocol);
-              res.setState(SessionState.newBuilder().setTlsVersion(TLSVersion.TLS1_3)
+              return SessionResult.newBuilder()
+              .setApplicationProtocol(grpcAppProtocol)
+              .setState(SessionState.newBuilder().setTlsVersion(TLSVersion.TLS1_3)
                 .setTlsCiphersuite(Ciphersuite.CHACHA20_POLY1305_SHA256)
                 .setInKey(ByteString.copyFrom(inKey.getBytes()))
-                .setOutKey(ByteString.copyFrom(outKey.getBytes())).build());
-              res.setPeerIdentity(peerIdentity);
-              res.setLocalIdentity(localIdentity);
-              return res.build();
+                .setOutKey(ByteString.copyFrom(outKey.getBytes())).build())
+              .setPeerIdentity(peerIdentity).setLocalIdentity(localIdentity).build();
             }
           };
         }
