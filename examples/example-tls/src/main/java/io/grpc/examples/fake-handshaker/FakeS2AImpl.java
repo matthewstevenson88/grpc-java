@@ -46,9 +46,9 @@ public class FakeS2AImpl extends S2AServiceGrpc.S2AServiceImplBase {
 
   enum HandshakeState {
   	INITIAL,
-	STARTED,
-	SENT,
-	COMPLETED
+		STARTED,
+		SENT,
+		COMPLETED
   }
 
   public FakeS2AImpl(){
@@ -57,26 +57,26 @@ public class FakeS2AImpl extends S2AServiceGrpc.S2AServiceImplBase {
 
   @Override
   public StreamObserver<SessionReq> setUpSession(final StreamObserver<SessionResp> stream) {
-	return new StreamObserver<SessionReq>(){
-	  @Override
-	  public void onNext(SessionReq req){
-		SessionResp resp = null;
-		if (req.getClientStart() != null){
-		  resp = processClientStart(req);
-		} else if (req.getServerStart() != null){
-		  resp = processServerStart(req);
-		} else if (req.getNext() != null){ 
-		  resp = processNext(req);
-		} else {
-		  logger.log(Level.WARNING,"Session request has unexpected type: "+req.getClass());
-		}
-		stream.onNext(resp);
-	  }
+		return new StreamObserver<SessionReq>(){
+		  @Override
+		  public void onNext(SessionReq req){
+				SessionResp resp = null;
+				if (req.getClientStart() != null){
+				  resp = processClientStart(req);
+				} else if (req.getServerStart() != null){
+				  resp = processServerStart(req);
+				} else if (req.getNext() != null){ 
+				  resp = processNext(req);
+				} else {
+				  logger.log(Level.WARNING,"Session request has unexpected type: "+req.getClass());
+				}
+				stream.onNext(resp);
+		  }
 
   	  @Override
-	  public void onError(Throwable t) {
-		logger.log(Level.WARNING, "Encountered error in routeChat", t);
-	  }
+		  public void onError(Throwable t) {
+				logger.log(Level.WARNING, "Encountered error in routeChat", t);
+	  	}
 
 			@Override
 			public void onCompleted() {
