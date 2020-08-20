@@ -235,7 +235,8 @@ public class FakeS2AImpl extends S2AServiceGrpc.S2AServiceImplBase {
 
       //processResumption processes a resumption ticket.
       SessionResp processResumption(SessionReq req){
-        return null;
+       return SessionResp.newBuilder().setStatus(SessionStatus.newBuilder().
+        setCode(Code.OK.value()).build()).build();
       }
 
       private SessionResult getSessionResult(){

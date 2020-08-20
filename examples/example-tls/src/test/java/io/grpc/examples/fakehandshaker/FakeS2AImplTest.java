@@ -212,4 +212,12 @@ public class FakeS2AImplTest {
     assertTrue(respLogger.getBytesConsumed() == FakeS2AImpl.CLIENT_FINISHED_FRAME.length());
     assertTrue(respLogger.getResult()!=null);
   }
+
+  @Test 
+  public void processResumption_pass() throws Exception{
+    SessionReq passReq= SessionReq.newBuilder()
+     .setResumptionTicket(ResumptionTicketReq.newBuilder().build()).build();
+    setUpReq.onNext(passReq);
+    assertTrue(respLogger.getStatus().getCode() == Code.OK.value());
+  }
 }
