@@ -15,6 +15,7 @@
  */
 package io.grpc.examples.helloworldtls;
 
+import static com.google.common.base.Preconditions.checkNotNull;
 import com.google.net.grpc.s2a.handshaker.*;
 import com.google.protobuf.*;
 
@@ -31,28 +32,37 @@ import java.util.logging.Level;
 
 public class FakeS2AImpl extends S2AServiceGrpc.S2AServiceImplBase {
   private static final Logger logger = Logger.getLogger(FakeS2AImpl.class.getName());
-  private HandshakeState state;
   private Identity peerIdentity;
   private Identity localIdentity;
   private boolean assistingClient;
+  private HandshakeState state;
 
-  public static final String grpcAppProtocol = "grpc";
-  public static final String clientHelloFrame = "ClientHello";
-  public static final String clientFinishedFrame = "ClientFinished";
-  public static final String serverFrame = "ServerHelloAndFinished";
 
-  private final String inKey  = "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk";
-  private final String outKey = "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj";
+  public static final String GRPC_APP_PROTOCOL = "grpc";
+  public static final String CLIENT_HELLO_FRAME = "ClientHello";
+  public static final String CLIENT_FINISHED_FRAME = "ClientFinished";
+  public static final String SERVER_FRAME = "ServerHelloAndFinished";
 
-  enum HandshakeState {
-  	INITIAL,
+  private static final String IN_KEY  = "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk";
+  private static final String OUT_KEY = "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj";
+
+  public enum HandshakeState {
+    INITIAL,
     STARTED,
     SENT,
     COMPLETED
   }
 
-  public FakeS2AImpl(){
-  	this.state=HandshakeState.INITIAL;
+  private FakeS2AImpl(){
+    state=HandshakeState.INITIAL;
+  }
+
+  public static FakeS2AImpl create(){
+    return new FakeS2AImpl();
+  }
+
+  public void setState(HandshakeState s){
+    state = s;
   }
 
   @Override
@@ -61,29 +71,39 @@ public class FakeS2AImpl extends S2AServiceGrpc.S2AServiceImplBase {
       @Override
       public void onNext(SessionReq req){
         SessionResp resp = null;
-        if (req.getClientStart() != null){
-          resp = processClientStart(req);
-        } else if (req.getServerStart() != null){
-          resp = processServerStart(req);
-        } else if (req.getNext() != null){ 
-          resp = processNext(req);
-        } else {
-          logger.log(Level.WARNING,"Session request has unexpected type: "+req.getClass());
+        switch (req.getReqOneofCase()){
+          case CLIENT_START:
+            resp = processClientStart(req);
+            break;
+          case SERVER_START:
+            resp = processServerStart(req);
+            break;
+          case NEXT:
+            resp = processNext(req);
+            break;
+          case RESUMPTION_TICKET:
+            resp = processResumption(req);
+            break;
+          default:
+            logger.log(Level.FINE,"Session request has unexpected type: "+req.getClass());
         }
         stream.onNext(resp);
       }
 
       @Override
       public void onError(Throwable t) {
-        logger.log(Level.WARNING, "Encountered error in routeChat", t);
+        logger.log(Level.FINE, "Encountered error in routeChat", t);
       }
 
       @Override
       public void onCompleted() {
         stream.onCompleted();
+        logger.log(Level.FINE, "Stream is complete");
       }
 
-      public SessionResp processClientStart(SessionReq req){
+      // processClientStart processes a ClientSessionStartRequest.
+      SessionResp processClientStart(SessionReq req){
+        checkNotNull(req, "SessionReq should not be null");
         SessionResp.Builder resp = SessionResp.newBuilder();
         if (state != HandshakeState.INITIAL){
           resp.setStatus(SessionStatus.newBuilder().setCode(Code.FAILED_PRECONDITION.value())
@@ -91,7 +111,7 @@ public class FakeS2AImpl extends S2AServiceGrpc.S2AServiceImplBase {
           return resp.build();
         }
         if (req.getClientStart().getApplicationProtocolsList().size() != 1 ||
-          req.getClientStart().getApplicationProtocols(0) != grpcAppProtocol){
+          req.getClientStart().getApplicationProtocols(0) != GRPC_APP_PROTOCOL){
            resp.setStatus(SessionStatus.newBuilder().setCode(Code.INVALID_ARGUMENT.value())
            .setDetails("application protocol was not grpc").build());
           return resp.build();
@@ -101,7 +121,12 @@ public class FakeS2AImpl extends S2AServiceGrpc.S2AServiceImplBase {
            .setDetails("max TLS version must be 1.3").build());
           return resp.build();
         }
-        resp.setOutFrames(ByteString.copyFrom(clientHelloFrame.getBytes()));
+        if (req.getClientStart().getMinTlsVersion() != TLSVersion.TLS1_3){
+          resp.setStatus(SessionStatus.newBuilder().setCode(Code.INVALID_ARGUMENT.value())
+           .setDetails("min TLS version must be 1.3").build());
+          return resp.build();
+        }
+        resp.setOutFrames(ByteString.copyFrom(CLIENT_HELLO_FRAME.getBytes()));
         resp.setBytesConsumed(0);
         resp.setStatus(SessionStatus.newBuilder().setCode(Code.OK.value()).build());
         localIdentity = req.getClientStart().getLocalIdentity();
@@ -113,7 +138,9 @@ public class FakeS2AImpl extends S2AServiceGrpc.S2AServiceImplBase {
         return resp.build();
       }
 
-      public SessionResp processServerStart(SessionReq req){
+      // processServerStart processes a ServerSessionStartRequest.
+      SessionResp processServerStart(SessionReq req){
+        checkNotNull(req, "SessionReq should not be null");
         SessionResp.Builder resp = SessionResp.newBuilder();
         if (state != HandshakeState.INITIAL){
           resp.setStatus(SessionStatus.newBuilder().setCode(Code.FAILED_PRECONDITION.value())
@@ -121,7 +148,7 @@ public class FakeS2AImpl extends S2AServiceGrpc.S2AServiceImplBase {
           return resp.build();
         }
         if (req.getServerStart().getApplicationProtocolsList().size() != 1 ||
-          req.getServerStart().getApplicationProtocols(0) != grpcAppProtocol){
+          req.getServerStart().getApplicationProtocols(0) != GRPC_APP_PROTOCOL){
           resp.setStatus(SessionStatus.newBuilder().setCode(Code.INVALID_ARGUMENT.value())
            .setDetails("application protocol was not grpc").build());
           return resp.build();
@@ -131,12 +158,17 @@ public class FakeS2AImpl extends S2AServiceGrpc.S2AServiceImplBase {
            .setDetails("max TLS version must be 1.3").build());
           return resp.build();
         }
+        if( req.getServerStart().getMinTlsVersion() != TLSVersion.TLS1_3){
+          resp.setStatus(SessionStatus.newBuilder().setCode(Code.INVALID_ARGUMENT.value())
+           .setDetails("min TLS version must be 1.3").build());
+          return resp.build();
+        }
         if (req.getServerStart().getInBytes().size() == 0) {
           resp.setBytesConsumed(0);
           state = HandshakeState.STARTED;
-        } else if (req.getServerStart().getInBytes().equals(ByteString.copyFrom(grpcAppProtocol.getBytes()))){
-          resp.setOutFrames(ByteString.copyFrom(serverFrame.getBytes()));
-          resp.setBytesConsumed(clientHelloFrame.length());
+        } else if (req.getServerStart().getInBytes().equals(ByteString.copyFrom(GRPC_APP_PROTOCOL.getBytes()))){
+          resp.setOutFrames(ByteString.copyFrom(SERVER_FRAME.getBytes()));
+          resp.setBytesConsumed(CLIENT_HELLO_FRAME.length());
           state = HandshakeState.SENT;
         } else {
           resp.setStatus(SessionStatus.newBuilder().setCode(Code.INTERNAL.value())
@@ -152,7 +184,9 @@ public class FakeS2AImpl extends S2AServiceGrpc.S2AServiceImplBase {
         return resp.build();
       }
 
-      public SessionResp processNext(SessionReq req){
+      // processNext processes a SessionNext request.
+      SessionResp processNext(SessionReq req){
+        checkNotNull(req, "SessionReq should not be null");
         SessionResp.Builder resp = SessionResp.newBuilder();
         if (assistingClient) {
           if (state != HandshakeState.SENT) {
@@ -160,31 +194,31 @@ public class FakeS2AImpl extends S2AServiceGrpc.S2AServiceImplBase {
              .setDetails("client handshaker was not in sent state").build());
             return resp.build();
           }
-          if (!req.getNext().getInBytes().equals(ByteString.copyFrom(serverFrame.getBytes()))){
+          if (!req.getNext().getInBytes().equals(ByteString.copyFrom(SERVER_FRAME.getBytes()))){
             resp.setStatus(SessionStatus.newBuilder().setCode(Code.INTERNAL.value())
              .setDetails("client request did not match server frame").build());
             return resp.build();
           }
-          resp.setOutFrames(ByteString.copyFrom(clientFinishedFrame.getBytes()));
-          resp.setBytesConsumed(serverFrame.length());
+          resp.setOutFrames(ByteString.copyFrom(CLIENT_FINISHED_FRAME.getBytes()));
+          resp.setBytesConsumed(SERVER_FRAME.length());
           state = HandshakeState.COMPLETED;
         } else {
           if (state == HandshakeState.STARTED){
-            if (!req.getNext().getInBytes().equals(ByteString.copyFrom(clientHelloFrame.getBytes()))){
+            if (!req.getNext().getInBytes().equals(ByteString.copyFrom(CLIENT_HELLO_FRAME.getBytes()))){
               resp.setStatus(SessionStatus.newBuilder().setCode(Code.INTERNAL.value())
                .setDetails("server request did not match client hello frame").build());
               return resp.build();
             }
-            resp.setOutFrames(ByteString.copyFrom(serverFrame.getBytes()));
-            resp.setBytesConsumed(clientHelloFrame.length());
+            resp.setOutFrames(ByteString.copyFrom(SERVER_FRAME.getBytes()));
+            resp.setBytesConsumed(CLIENT_HELLO_FRAME.length());
             state = HandshakeState.SENT;
           } else if(state == HandshakeState.SENT) {
-            if (!req.getNext().getInBytes().equals(ByteString.copyFrom(clientFinishedFrame.getBytes()))){
+            if (!req.getNext().getInBytes().equals(ByteString.copyFrom(CLIENT_FINISHED_FRAME.getBytes()))){
               resp.setStatus(SessionStatus.newBuilder().setCode(Code.INTERNAL.value())
                .setDetails("server request did not match client finished frame").build());
               return resp.build();
             }
-            resp.setBytesConsumed(clientFinishedFrame.length());
+            resp.setBytesConsumed(CLIENT_FINISHED_FRAME.length());
             state = HandshakeState.COMPLETED;
           } else {
             resp.setStatus(SessionStatus.newBuilder().setCode(Code.FAILED_PRECONDITION.value())
@@ -199,14 +233,25 @@ public class FakeS2AImpl extends S2AServiceGrpc.S2AServiceImplBase {
       return resp.build();
       }
 
+      //processResumption processes a resumption ticket.
+      SessionResp processResumption(SessionReq req){
+        return null;
+      }
+
       private SessionResult getSessionResult(){
-        return SessionResult.newBuilder()
-         .setApplicationProtocol(grpcAppProtocol)
+        SessionResult.Builder result = SessionResult.newBuilder()
+         .setApplicationProtocol(GRPC_APP_PROTOCOL)
          .setState(SessionState.newBuilder().setTlsVersion(TLSVersion.TLS1_3)
-         .setTlsCiphersuite(Ciphersuite.CHACHA20_POLY1305_SHA256)
-         .setInKey(ByteString.copyFrom(inKey.getBytes()))
-         .setOutKey(ByteString.copyFrom(outKey.getBytes())).build())
-        .setPeerIdentity(peerIdentity).setLocalIdentity(localIdentity).build();
+          .setTlsCiphersuite(Ciphersuite.AES_128_GCM_SHA256)
+          .setInKey(ByteString.copyFrom(IN_KEY.getBytes()))
+          .setOutKey(ByteString.copyFrom(OUT_KEY.getBytes())).build());
+        if (peerIdentity != null) {
+          result.setPeerIdentity(peerIdentity);
+        }
+        if(localIdentity !=null) {
+          result.setLocalIdentity(localIdentity);
+        }
+        return result.build();
       }
     };
   }

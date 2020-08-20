@@ -39,7 +39,7 @@ import java.util.logging.Level;
 // TODO: change flags to use com.google.common.flags
 
 /**
- * Server that manages startup/shutdown of a fake handshaker service.
+ * Manages startup/shutdown of a fake handshaker service.
  */
 public class FakeHandshaker {
     private static final Logger logger = Logger.getLogger(FakeHandshaker.class.getName());
@@ -52,7 +52,7 @@ public class FakeHandshaker {
 
     private void start() throws IOException {
         server = NettyServerBuilder.forPort(port)
-                .addService(new FakeS2AImpl())
+                .addService(FakeS2AImpl.create())
                 .build()
                 .start();
         logger.info("Server started, listening at address localhost:"+ port);

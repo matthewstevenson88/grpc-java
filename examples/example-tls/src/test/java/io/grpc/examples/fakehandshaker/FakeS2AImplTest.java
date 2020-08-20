@@ -38,78 +38,178 @@ import com.google.net.grpc.s2a.handshaker.*;
 /** Unit tests for {@link FakeS2AImpl}. */
 @RunWith(JUnit4.class)
 public class FakeS2AImplTest {
-  StreamObserver<SessionResp> initRespStream;
-  SessionResp respLogger=null;
+  private StreamObserver<SessionResp> initRespStream;
+  private FakeS2AImpl fakeS2A;
+  private StreamObserver<SessionReq> setUpReq;
+  private SessionResp respLogger;
+  private Throwable error;
 
   @Before
   public void setUp() throws Exception {
-    this.initRespStream = new StreamObserver<SessionResp>(){
+    error=null;
+    respLogger=null;
+    fakeS2A = FakeS2AImpl.create();
+    initRespStream = new StreamObserver<SessionResp>(){
       public void onNext(SessionResp resp){
         respLogger = resp;
       }
-      public void onError(Throwable t){}
+      public void onError(Throwable t){
+        error = t;
+      }
       public void onCompleted(){}
     };
+    setUpReq = fakeS2A.setUpSession(initRespStream);
+
   }
 
   @Test
-  public void TestProcessClientStart() throws Exception {
-    FakeS2AImpl fakeS2A = new FakeS2AImpl();
-    StreamObserver<SessionReq> setUpReq = fakeS2A.setUpSession(this.initRespStream);
-
+  public void processClientStart_failsBecauseEmptyClientStart() throws Exception {
     SessionReq emptyReq = SessionReq.newBuilder().setClientStart(
       ClientSessionStartReq.newBuilder().build()).build();
     setUpReq.onNext(emptyReq);
-    assertFalse(this.respLogger.getStatus().getCode() == Code.OK.value()); 
+    assertFalse(respLogger.getStatus().getCode() == Code.OK.value()); 
+  }
 
+  @Test
+  public void processClientStart_failsBecauseWrongApplicationProtocol() throws Exception {
     SessionReq nonGRPCReq = SessionReq.newBuilder().setClientStart(
       ClientSessionStartReq.newBuilder().addApplicationProtocols("").build()).build();
     setUpReq.onNext(nonGRPCReq);
-    assertFalse(this.respLogger.getStatus().getCode() == Code.OK.value());
+    assertFalse(respLogger.getStatus().getCode() == Code.OK.value());
+  }
 
+  @Test
+  public void processClientStart_failsBecauseWrongMaxTLSVersion()throws Exception {
     SessionReq incorrectTLSReq = SessionReq.newBuilder().setClientStart(
       ClientSessionStartReq.newBuilder().setMaxTlsVersion(TLSVersion.TLS1_2).build()).build();
     setUpReq.onNext(incorrectTLSReq);
-    assertFalse(this.respLogger.getStatus().getCode() == Code.OK.value());
-
-    SessionReq passReq = SessionReq.newBuilder().setClientStart(
-      ClientSessionStartReq.newBuilder().addApplicationProtocols(FakeS2AImpl.grpcAppProtocol)
-      .setMinTlsVersion(TLSVersion.TLS1_2).setMaxTlsVersion(TLSVersion.TLS1_3)
-      .addTlsCiphersuites(Ciphersuite.AES_128_GCM_SHA256).build()).build();
-    setUpReq.onNext(passReq);
-    assertTrue(this.respLogger.getStatus().getCode() == Code.OK.value());
-    assertTrue(this.respLogger.getBytesConsumed() == 0);
-    assertTrue(this.respLogger.getOutFrames().equals(ByteString.copyFrom(FakeS2AImpl.clientHelloFrame.getBytes())));
+    assertFalse(respLogger.getStatus().getCode() == Code.OK.value());
   }
 
+  @Test
+  public void processClientStart_failsBecauseWrongMinTLSVersion()throws Exception {
+    SessionReq incorrectTLSReq = SessionReq.newBuilder().setClientStart(
+      ClientSessionStartReq.newBuilder().setMaxTlsVersion(TLSVersion.TLS1_3)
+      .setMinTlsVersion(TLSVersion.TLS1_2).build()).build();
+    setUpReq.onNext(incorrectTLSReq);
+    assertFalse(respLogger.getStatus().getCode() == Code.OK.value());
+  }
 
-  public void TestProcessServerStart() throws Exception {
-    FakeS2AImpl fakeS2A = new FakeS2AImpl();
-    StreamObserver<SessionReq> setUpReq = fakeS2A.setUpSession(this.initRespStream);
+  @Test 
+  public void processClientStart_pass()throws Exception{
+    SessionReq passReq = SessionReq.newBuilder().setClientStart(
+      ClientSessionStartReq.newBuilder().addApplicationProtocols(FakeS2AImpl.GRPC_APP_PROTOCOL)
+      .setMinTlsVersion(TLSVersion.TLS1_3).setMaxTlsVersion(TLSVersion.TLS1_3)
+      .addTlsCiphersuites(Ciphersuite.AES_128_GCM_SHA256).build()).build();
+    setUpReq.onNext(passReq);
+    assertTrue(respLogger.getStatus().getCode() == Code.OK.value());
+    assertTrue(respLogger.getBytesConsumed() == 0);
+    assertTrue(respLogger.getOutFrames().equals(ByteString.copyFrom(FakeS2AImpl.CLIENT_HELLO_FRAME.getBytes())));
+  }
 
+  @Test
+  public void processServerStart_failsBecauseEmptyServerStart() throws Exception {
     SessionReq emptyReq = SessionReq.newBuilder().setServerStart(
       ServerSessionStartReq.newBuilder().build()).build();
     setUpReq.onNext(emptyReq);
-    assertFalse(this.respLogger.getStatus().getCode() == Code.OK.value()); 
+    assertFalse(respLogger.getStatus().getCode() == Code.OK.value()); 
+  }
 
+  @Test
+  public void processServerStart_failsBecauseWrongApplicationProtocol() throws Exception {
     SessionReq nonGRPCReq = SessionReq.newBuilder().setServerStart(
       ServerSessionStartReq.newBuilder().addApplicationProtocols("").build()).build();
     setUpReq.onNext(nonGRPCReq);
-    assertFalse(this.respLogger.getStatus().getCode() == Code.OK.value());
+    assertFalse(respLogger.getStatus().getCode() == Code.OK.value());
+  }
 
+  @Test
+  public void processServerStart_failsBecauseWrongMaxTLSVersion() throws Exception {
     SessionReq incorrectTLSReq = SessionReq.newBuilder().setServerStart(
       ServerSessionStartReq.newBuilder().setMaxTlsVersion(TLSVersion.TLS1_2).build()).build();
     setUpReq.onNext(incorrectTLSReq);
-    assertFalse(this.respLogger.getStatus().getCode() == Code.OK.value());
+    assertFalse(respLogger.getStatus().getCode() == Code.OK.value());
+  }
 
+    @Test
+  public void processServerStart_failsBecauseWrongMinTLSVersion() throws Exception {
+    SessionReq incorrectTLSReq = SessionReq.newBuilder().setServerStart(
+      ServerSessionStartReq.newBuilder().setMaxTlsVersion(TLSVersion.TLS1_3)
+      .setMinTlsVersion(TLSVersion.TLS1_2).build()).build();
+    setUpReq.onNext(incorrectTLSReq);
+    assertFalse(respLogger.getStatus().getCode() == Code.OK.value());
+  }
+
+  @Test
+  public void processServerStart_pass() throws Exception {
     SessionReq passReq = SessionReq.newBuilder().setServerStart(
-      ServerSessionStartReq.newBuilder().addApplicationProtocols(FakeS2AImpl.grpcAppProtocol)
-      .setMinTlsVersion(TLSVersion.TLS1_2).setMaxTlsVersion(TLSVersion.TLS1_3)
+      ServerSessionStartReq.newBuilder().addApplicationProtocols(FakeS2AImpl.GRPC_APP_PROTOCOL)
+      .setMinTlsVersion(TLSVersion.TLS1_3).setMaxTlsVersion(TLSVersion.TLS1_3)
       .addTlsCiphersuites(Ciphersuite.AES_128_GCM_SHA256)
-      .setInBytes(ByteString.copyFrom(FakeS2AImpl.grpcAppProtocol.getBytes())).build()).build();
+      .setInBytes(ByteString.copyFrom(FakeS2AImpl.GRPC_APP_PROTOCOL.getBytes())).build()).build();
     setUpReq.onNext(passReq);
-    assertTrue(this.respLogger.getStatus().getCode() == Code.OK.value());
-    assertTrue(this.respLogger.getOutFrames().equals(ByteString.copyFrom(FakeS2AImpl.serverFrame.getBytes())));
-    assertTrue(this.respLogger.getBytesConsumed() == FakeS2AImpl.clientHelloFrame.length());
+    assertTrue(respLogger.getStatus().getCode() == Code.OK.value());
+    assertTrue(respLogger.getOutFrames().equals(ByteString.copyFrom(FakeS2AImpl.SERVER_FRAME.getBytes())));
+    assertTrue(respLogger.getBytesConsumed() == FakeS2AImpl.CLIENT_HELLO_FRAME.length());
+  }
+
+  @Test
+  public void processNext_failBecauseWrongState() throws Exception {
+    fakeS2A.setState(FakeS2AImpl.HandshakeState.INITIAL);
+    SessionReq emptyReq = SessionReq.newBuilder().setNext(
+      SessionNextReq.newBuilder().build()).build();
+    setUpReq.onNext(emptyReq);
+    assertFalse(respLogger.getStatus().getCode() == Code.OK.value()); 
+  }
+
+  @Test
+  public void processNext_failBecauseEmptySessionNext() throws Exception{
+    fakeS2A.setState(FakeS2AImpl.HandshakeState.STARTED);
+    SessionReq emptyReq = SessionReq.newBuilder().setNext(
+      SessionNextReq.newBuilder().build()).build();
+    setUpReq.onNext(emptyReq);
+    assertFalse(respLogger.getStatus().getCode() == Code.OK.value()); 
+  }
+
+  @Test 
+  public void processNext_failBecauseWrongHelloFrame() throws Exception{
+    fakeS2A.setState(FakeS2AImpl.HandshakeState.STARTED);
+    SessionReq emptyReq = SessionReq.newBuilder().setNext(
+      SessionNextReq.newBuilder().setInBytes(ByteString.copyFrom("".getBytes())).build()).build();
+    setUpReq.onNext(emptyReq);
+    assertFalse(respLogger.getStatus().getCode() == Code.OK.value()); 
+  }
+
+  @Test 
+  public void processNext_failBecauseWrongFinishedFrame() throws Exception{
+    fakeS2A.setState(FakeS2AImpl.HandshakeState.SENT);
+    SessionReq emptyReq = SessionReq.newBuilder().setNext(
+      SessionNextReq.newBuilder().setInBytes(ByteString.copyFrom("".getBytes())).build()).build();
+    setUpReq.onNext(emptyReq);
+    assertFalse(respLogger.getStatus().getCode() == Code.OK.value()); 
+  }
+
+  @Test
+  public void processNext_passHandshakeStarted() throws Exception{
+    fakeS2A.setState(FakeS2AImpl.HandshakeState.STARTED);
+    SessionReq emptyReq = SessionReq.newBuilder().setNext(
+      SessionNextReq.newBuilder().setInBytes(
+        ByteString.copyFrom(FakeS2AImpl.CLIENT_HELLO_FRAME.getBytes())).build()).build();
+    setUpReq.onNext(emptyReq);
+    assertTrue(respLogger.getStatus().getCode() == Code.OK.value()); 
+    assertTrue(respLogger.getOutFrames().equals(ByteString.copyFrom(FakeS2AImpl.SERVER_FRAME.getBytes())));
+    assertTrue(respLogger.getBytesConsumed() == FakeS2AImpl.CLIENT_HELLO_FRAME.length());
+  }
+
+  @Test
+  public void processNext_passHandshakeSent() throws Exception{
+    fakeS2A.setState(FakeS2AImpl.HandshakeState.SENT);
+    SessionReq emptyReq = SessionReq.newBuilder().setNext(
+      SessionNextReq.newBuilder().setInBytes(
+        ByteString.copyFrom(FakeS2AImpl.CLIENT_FINISHED_FRAME.getBytes())).build()).build();
+    setUpReq.onNext(emptyReq);
+    assertTrue(respLogger.getStatus().getCode() == Code.OK.value()); 
+    assertTrue(respLogger.getBytesConsumed() == FakeS2AImpl.CLIENT_FINISHED_FRAME.length());
+    assertTrue(respLogger.getResult()!=null);
   }
 }
