@@ -21,18 +21,18 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import io.grpc.Server;
-import io.grpc.Status.Code;
-import io.grpc.stub.StreamObserver;
-
-import io.grpc.examples.helloworldtls.*;
-import com.google.protobuf.*;
-import com.google.net.grpc.s2a.handshaker.*;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+
+import io.grpc.Server;
+import io.grpc.Status.Code;
+import io.grpc.stub.StreamObserver;
+import io.grpc.examples.helloworldtls.*;
+import com.google.protobuf.*;
+import com.google.net.grpc.s2a.handshaker.*;
+
 
 /** Unit tests for {@link FakeS2AImpl}. */
 @RunWith(JUnit4.class)
