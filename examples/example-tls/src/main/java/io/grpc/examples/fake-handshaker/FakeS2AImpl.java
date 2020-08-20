@@ -32,10 +32,10 @@ import java.util.logging.Level;
 
 public class FakeS2AImpl extends S2AServiceGrpc.S2AServiceImplBase {
   private static final Logger logger = Logger.getLogger(FakeS2AImpl.class.getName());
+  private HandshakeState state;
   private Identity peerIdentity;
   private Identity localIdentity;
   private boolean assistingClient;
-  private HandshakeState state;
 
 
   public static final String GRPC_APP_PROTOCOL = "grpc";

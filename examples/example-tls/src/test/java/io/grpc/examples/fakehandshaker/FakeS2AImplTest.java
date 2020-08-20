@@ -68,6 +68,7 @@ public class FakeS2AImplTest {
       ClientSessionStartReq.newBuilder().build()).build();
     setUpReq.onNext(emptyReq);
     assertFalse(respLogger.getStatus().getCode() == Code.OK.value()); 
+    assertTrue(error==null);
   }
 
   @Test
@@ -76,6 +77,7 @@ public class FakeS2AImplTest {
       ClientSessionStartReq.newBuilder().addApplicationProtocols("").build()).build();
     setUpReq.onNext(nonGRPCReq);
     assertFalse(respLogger.getStatus().getCode() == Code.OK.value());
+    assertTrue(error==null);
   }
 
   @Test
@@ -84,6 +86,7 @@ public class FakeS2AImplTest {
       ClientSessionStartReq.newBuilder().setMaxTlsVersion(TLSVersion.TLS1_2).build()).build();
     setUpReq.onNext(incorrectTLSReq);
     assertFalse(respLogger.getStatus().getCode() == Code.OK.value());
+    assertTrue(error==null);
   }
 
   @Test
@@ -93,6 +96,7 @@ public class FakeS2AImplTest {
       .setMinTlsVersion(TLSVersion.TLS1_2).build()).build();
     setUpReq.onNext(incorrectTLSReq);
     assertFalse(respLogger.getStatus().getCode() == Code.OK.value());
+    assertTrue(error==null);
   }
 
   @Test 
@@ -105,6 +109,7 @@ public class FakeS2AImplTest {
     assertTrue(respLogger.getStatus().getCode() == Code.OK.value());
     assertTrue(respLogger.getBytesConsumed() == 0);
     assertTrue(respLogger.getOutFrames().equals(ByteString.copyFrom(FakeS2AImpl.CLIENT_HELLO_FRAME.getBytes())));
+    assertTrue(error==null);
   }
 
   @Test
@@ -113,6 +118,7 @@ public class FakeS2AImplTest {
       ServerSessionStartReq.newBuilder().build()).build();
     setUpReq.onNext(emptyReq);
     assertFalse(respLogger.getStatus().getCode() == Code.OK.value()); 
+    assertTrue(error==null);
   }
 
   @Test
@@ -121,6 +127,7 @@ public class FakeS2AImplTest {
       ServerSessionStartReq.newBuilder().addApplicationProtocols("").build()).build();
     setUpReq.onNext(nonGRPCReq);
     assertFalse(respLogger.getStatus().getCode() == Code.OK.value());
+    assertTrue(error==null);
   }
 
   @Test
@@ -129,6 +136,7 @@ public class FakeS2AImplTest {
       ServerSessionStartReq.newBuilder().setMaxTlsVersion(TLSVersion.TLS1_2).build()).build();
     setUpReq.onNext(incorrectTLSReq);
     assertFalse(respLogger.getStatus().getCode() == Code.OK.value());
+    assertTrue(error==null);
   }
 
     @Test
@@ -138,6 +146,7 @@ public class FakeS2AImplTest {
       .setMinTlsVersion(TLSVersion.TLS1_2).build()).build();
     setUpReq.onNext(incorrectTLSReq);
     assertFalse(respLogger.getStatus().getCode() == Code.OK.value());
+    assertTrue(error==null);
   }
 
   @Test
@@ -151,6 +160,7 @@ public class FakeS2AImplTest {
     assertTrue(respLogger.getStatus().getCode() == Code.OK.value());
     assertTrue(respLogger.getOutFrames().equals(ByteString.copyFrom(FakeS2AImpl.SERVER_FRAME.getBytes())));
     assertTrue(respLogger.getBytesConsumed() == FakeS2AImpl.CLIENT_HELLO_FRAME.length());
+    assertTrue(error==null);
   }
 
   @Test
@@ -160,6 +170,7 @@ public class FakeS2AImplTest {
       SessionNextReq.newBuilder().build()).build();
     setUpReq.onNext(emptyReq);
     assertFalse(respLogger.getStatus().getCode() == Code.OK.value()); 
+    assertTrue(error==null);
   }
 
   @Test
@@ -169,6 +180,7 @@ public class FakeS2AImplTest {
       SessionNextReq.newBuilder().build()).build();
     setUpReq.onNext(emptyReq);
     assertFalse(respLogger.getStatus().getCode() == Code.OK.value()); 
+    assertTrue(error==null);
   }
 
   @Test 
@@ -178,6 +190,7 @@ public class FakeS2AImplTest {
       SessionNextReq.newBuilder().setInBytes(ByteString.copyFrom("".getBytes())).build()).build();
     setUpReq.onNext(emptyReq);
     assertFalse(respLogger.getStatus().getCode() == Code.OK.value()); 
+    assertTrue(error==null);
   }
 
   @Test 
@@ -187,6 +200,7 @@ public class FakeS2AImplTest {
       SessionNextReq.newBuilder().setInBytes(ByteString.copyFrom("".getBytes())).build()).build();
     setUpReq.onNext(emptyReq);
     assertFalse(respLogger.getStatus().getCode() == Code.OK.value()); 
+    assertTrue(error==null);
   }
 
   @Test
@@ -199,6 +213,7 @@ public class FakeS2AImplTest {
     assertTrue(respLogger.getStatus().getCode() == Code.OK.value()); 
     assertTrue(respLogger.getOutFrames().equals(ByteString.copyFrom(FakeS2AImpl.SERVER_FRAME.getBytes())));
     assertTrue(respLogger.getBytesConsumed() == FakeS2AImpl.CLIENT_HELLO_FRAME.length());
+    assertTrue(error==null);
   }
 
   @Test
@@ -211,6 +226,7 @@ public class FakeS2AImplTest {
     assertTrue(respLogger.getStatus().getCode() == Code.OK.value()); 
     assertTrue(respLogger.getBytesConsumed() == FakeS2AImpl.CLIENT_FINISHED_FRAME.length());
     assertTrue(respLogger.getResult()!=null);
+    assertTrue(error==null);
   }
 
   @Test 
@@ -219,5 +235,6 @@ public class FakeS2AImplTest {
      .setResumptionTicket(ResumptionTicketReq.newBuilder().build()).build();
     setUpReq.onNext(passReq);
     assertTrue(respLogger.getStatus().getCode() == Code.OK.value());
+    assertTrue(error==null);
   }
 }
