@@ -30,53 +30,53 @@ import java.util.logging.Level;
 
 
 public class FakeS2AImpl extends S2AServiceGrpc.S2AServiceImplBase {
-	private static final Logger logger = Logger.getLogger(FakeS2AImpl.class.getName());
-	private HandshakeState state;
-	private Identity peerIdentity;
-	private Identity localIdentity;
-	private boolean assistingClient;
+  private static final Logger logger = Logger.getLogger(FakeS2AImpl.class.getName());
+  private HandshakeState state;
+  private Identity peerIdentity;
+  private Identity localIdentity;
+  private boolean assistingClient;
 
-	public static final String grpcAppProtocol = "grpc";
-	public static final String clientHelloFrame = "ClientHello";
-	public static final String clientFinishedFrame = "ClientFinished";
-	public static final String serverFrame = "ServerHelloAndFinished";
+  public static final String grpcAppProtocol = "grpc";
+  public static final String clientHelloFrame = "ClientHello";
+  public static final String clientFinishedFrame = "ClientFinished";
+  public static final String serverFrame = "ServerHelloAndFinished";
 
-	private final String inKey  = "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk";
-	private final String outKey = "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj";
+  private final String inKey  = "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk";
+  private final String outKey = "jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj";
 
-	enum HandshakeState {
-		INITIAL,
-		STARTED,
-		SENT,
-		COMPLETED
-	}
+  enum HandshakeState {
+  	INITIAL,
+	STARTED,
+	SENT,
+	COMPLETED
+  }
 
-	public FakeS2AImpl(){
-		this.state=HandshakeState.INITIAL;
-	}
+  public FakeS2AImpl(){
+  	this.state=HandshakeState.INITIAL;
+  }
 
-	@Override
-	public StreamObserver<SessionReq> setUpSession(final StreamObserver<SessionResp> stream) {
-		return new StreamObserver<SessionReq>(){
-			@Override
-			public void onNext(SessionReq req){
-				SessionResp resp = null;
-				if (req.getClientStart() != null){
-					resp = processClientStart(req);
-				} else if (req.getServerStart() != null){
-					resp = processServerStart(req);
-				} else if (req.getNext() != null){ 
-					resp = processNext(req);
-				} else {
-					logger.log(Level.WARNING,"Session request has unexpected type: "+req.getClass());
-				}
-				stream.onNext(resp);
-			}
+  @Override
+  public StreamObserver<SessionReq> setUpSession(final StreamObserver<SessionResp> stream) {
+	return new StreamObserver<SessionReq>(){
+	  @Override
+	  public void onNext(SessionReq req){
+		SessionResp resp = null;
+		if (req.getClientStart() != null){
+		  resp = processClientStart(req);
+		} else if (req.getServerStart() != null){
+		  resp = processServerStart(req);
+		} else if (req.getNext() != null){ 
+		  resp = processNext(req);
+		} else {
+		  logger.log(Level.WARNING,"Session request has unexpected type: "+req.getClass());
+		}
+		stream.onNext(resp);
+	  }
 
-			@Override
-			public void onError(Throwable t) {
-				logger.log(Level.WARNING, "Encountered error in routeChat", t);
-			}
+  	  @Override
+	  public void onError(Throwable t) {
+		logger.log(Level.WARNING, "Encountered error in routeChat", t);
+	  }
 
 			@Override
 			public void onCompleted() {
