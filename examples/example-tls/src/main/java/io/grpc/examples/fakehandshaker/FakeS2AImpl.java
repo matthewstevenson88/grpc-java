@@ -73,12 +73,12 @@ public class FakeS2AImpl extends S2AServiceGrpc.S2AServiceImplBase {
     state=s;
   }
 
-  // Create a default FakeS2AImpl instance.
+  // Creates a default FakeS2AImpl instance.
   public static FakeS2AImpl create(){
     return new FakeS2AImpl();
   }
 
-  // setUpSession sets up the S2A session. 
+  // Sets up the S2A session. 
   @Override
   public StreamObserver<SessionReq> setUpSession(final StreamObserver<SessionResp> stream) {
     return new StreamObserver<SessionReq>(){
@@ -115,7 +115,7 @@ public class FakeS2AImpl extends S2AServiceGrpc.S2AServiceImplBase {
         logger.log(Level.FINE, "Stream is complete");
       }
 
-      // processClientStart processes a ClientSessionStartRequest.
+      // Processes a ClientSessionStartRequest.
       SessionResp processClientStart(SessionReq req){
         checkNotNull(req, "SessionReq should not be null");
         SessionResp.Builder resp = SessionResp.newBuilder();
@@ -152,7 +152,7 @@ public class FakeS2AImpl extends S2AServiceGrpc.S2AServiceImplBase {
         return resp.build();
       }
 
-      // processServerStart processes a ServerSessionStartRequest.
+      // Processes a ServerSessionStartRequest.
       SessionResp processServerStart(SessionReq req){
         checkNotNull(req, "SessionReq should not be null");
         SessionResp.Builder resp = SessionResp.newBuilder();
@@ -198,7 +198,7 @@ public class FakeS2AImpl extends S2AServiceGrpc.S2AServiceImplBase {
         return resp.build();
       }
 
-      // processNext processes a SessionNext request.
+      // Processes a SessionNext request.
       SessionResp processNext(SessionReq req){
         checkNotNull(req, "SessionReq should not be null");
         SessionResp.Builder resp = SessionResp.newBuilder();
@@ -247,7 +247,7 @@ public class FakeS2AImpl extends S2AServiceGrpc.S2AServiceImplBase {
       return resp.build();
       }
 
-      //processResumption processes a resumption ticket.
+      // Processes a resumption ticket.
       SessionResp processResumption(SessionReq req){
        return SessionResp.newBuilder().setStatus(SessionStatus.newBuilder().
         setCode(Code.OK.value()).build()).build();
