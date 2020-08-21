@@ -13,16 +13,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package io.grpc.examples.helloworldtls;
+package io.grpc.examples.fakehandshaker;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import com.google.net.grpc.s2a.handshaker.*;
-import com.google.protobuf.*;
+import com.google.common.annotations.VisibleForTesting;
+
+import com.google.net.grpc.s2a.handshaker.SessionReq;
+import com.google.net.grpc.s2a.handshaker.SessionResp;
+import com.google.net.grpc.s2a.handshaker.SessionResult;
+import com.google.net.grpc.s2a.handshaker.SessionState;
+import com.google.net.grpc.s2a.handshaker.SessionStatus;
+import com.google.net.grpc.s2a.handshaker.SessionNextReq;
+import com.google.net.grpc.s2a.handshaker.ResumptionTicketReq;
+import com.google.net.grpc.s2a.handshaker.TLSVersion;
+import com.google.net.grpc.s2a.handshaker.Ciphersuite;
+import com.google.net.grpc.s2a.handshaker.Identity;
+import com.google.net.grpc.s2a.handshaker.S2AServiceGrpc;
+import com.google.protobuf.ByteString;
 
 import io.grpc.Server;
 import io.grpc.Status.Code;
 import io.grpc.stub.StreamObserver;
-
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -38,7 +49,7 @@ public class FakeS2AImpl extends S2AServiceGrpc.S2AServiceImplBase {
   private boolean assistingClient;
 
 
-  public static final String GRPC_APP_PROTOCOL = "grpc";
+  public static final String GRPC_APPLICATION_PROTOCOL = "grpc";
   public static final String CLIENT_HELLO_FRAME = "ClientHello";
   public static final String CLIENT_FINISHED_FRAME = "ClientFinished";
   public static final String SERVER_FRAME = "ServerHelloAndFinished";
@@ -53,18 +64,21 @@ public class FakeS2AImpl extends S2AServiceGrpc.S2AServiceImplBase {
     COMPLETED
   }
 
-  private FakeS2AImpl(){
-    state=HandshakeState.INITIAL;
+  private FakeS2AImpl() {
+    state = HandshakeState.INITIAL;
   }
 
+  @VisibleForTesting
+  FakeS2AImpl(HandshakeState s){
+    state=s;
+  }
+
+  // Create a default FakeS2AImpl instance.
   public static FakeS2AImpl create(){
     return new FakeS2AImpl();
   }
 
-  public void setState(HandshakeState s){
-    state = s;
-  }
-
+  // setUpSession sets up the S2A session. 
   @Override
   public StreamObserver<SessionReq> setUpSession(final StreamObserver<SessionResp> stream) {
     return new StreamObserver<SessionReq>(){
@@ -85,14 +99,14 @@ public class FakeS2AImpl extends S2AServiceGrpc.S2AServiceImplBase {
             resp = processResumption(req);
             break;
           default:
-            logger.log(Level.FINE,"Session request has unexpected type: "+req.getClass());
+            logger.log(Level.FINE,"Session request has unexpected type: %s", req.getClass());
         }
         stream.onNext(resp);
       }
 
       @Override
       public void onError(Throwable t) {
-        logger.log(Level.FINE, "Encountered error in routeChat", t);
+        logger.log(Level.FINE, "Encountered error in routeChat: %s", t);
       }
 
       @Override
@@ -111,7 +125,7 @@ public class FakeS2AImpl extends S2AServiceGrpc.S2AServiceImplBase {
           return resp.build();
         }
         if (req.getClientStart().getApplicationProtocolsList().size() != 1 ||
-          req.getClientStart().getApplicationProtocols(0) != GRPC_APP_PROTOCOL){
+          req.getClientStart().getApplicationProtocols(0) != GRPC_APPLICATION_PROTOCOL){
            resp.setStatus(SessionStatus.newBuilder().setCode(Code.INVALID_ARGUMENT.value())
            .setDetails("application protocol was not grpc").build());
           return resp.build();
@@ -148,7 +162,7 @@ public class FakeS2AImpl extends S2AServiceGrpc.S2AServiceImplBase {
           return resp.build();
         }
         if (req.getServerStart().getApplicationProtocolsList().size() != 1 ||
-          req.getServerStart().getApplicationProtocols(0) != GRPC_APP_PROTOCOL){
+          req.getServerStart().getApplicationProtocols(0) != GRPC_APPLICATION_PROTOCOL){
           resp.setStatus(SessionStatus.newBuilder().setCode(Code.INVALID_ARGUMENT.value())
            .setDetails("application protocol was not grpc").build());
           return resp.build();
@@ -166,7 +180,7 @@ public class FakeS2AImpl extends S2AServiceGrpc.S2AServiceImplBase {
         if (req.getServerStart().getInBytes().size() == 0) {
           resp.setBytesConsumed(0);
           state = HandshakeState.STARTED;
-        } else if (req.getServerStart().getInBytes().equals(ByteString.copyFrom(GRPC_APP_PROTOCOL.getBytes()))){
+        } else if (req.getServerStart().getInBytes().equals(ByteString.copyFrom(GRPC_APPLICATION_PROTOCOL.getBytes()))){
           resp.setOutFrames(ByteString.copyFrom(SERVER_FRAME.getBytes()));
           resp.setBytesConsumed(CLIENT_HELLO_FRAME.length());
           state = HandshakeState.SENT;
@@ -241,7 +255,7 @@ public class FakeS2AImpl extends S2AServiceGrpc.S2AServiceImplBase {
 
       private SessionResult getSessionResult(){
         SessionResult.Builder result = SessionResult.newBuilder()
-         .setApplicationProtocol(GRPC_APP_PROTOCOL)
+         .setApplicationProtocol(GRPC_APPLICATION_PROTOCOL)
          .setState(SessionState.newBuilder().setTlsVersion(TLSVersion.TLS1_3)
           .setTlsCiphersuite(Ciphersuite.AES_128_GCM_SHA256)
           .setInKey(ByteString.copyFrom(IN_KEY.getBytes()))

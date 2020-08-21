@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-package io.grpc.examples.helloworldtls;
+package io.grpc.examples.fakehandshaker;
 
 import static com.google.common.base.Preconditions.checkNotNull;
-import io.grpc.examples.helloworldtls.FakeS2AImpl;
+import io.grpc.examples.fakehandshaker.FakeS2AImpl;
 
 import io.grpc.Server;
 import io.grpc.examples.helloworld.GreeterGrpc;
